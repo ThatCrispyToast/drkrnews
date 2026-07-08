@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>drkr news - Hacker News sorted by time</title>
+<meta name="description" content="An unofficial, theme-able clone of hckrnews.com - Hacker News sorted by time, with dark mode and customizable themes."/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="theme-color" content="#ffffff"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23ff6600'/%3E%3Ctext x='16' y='24' font-family='Verdana,sans-serif' font-size='22' fill='%23fff' text-anchor='middle'%3Ed%3C/text%3E%3C/svg%3E"/>
+<script>
+/* Apply the saved theme before first paint to avoid a flash of the wrong scheme. */
+(function () {
+  var t = { mode: 'auto', lightTheme: 'classic', darkTheme: 'drkr', accent: null };
+  try {
+    var s = JSON.parse(localStorage.getItem('drkrnews:v1') || '{}');
+    for (var k in t) if (s[k] !== undefined) t[k] = s[k];
+  } catch (e) {}
+  var q = new URLSearchParams(location.search);
+  if (q.get('mode')) t.mode = q.get('mode');
+  var dark = t.mode === 'dark' || (t.mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  var theme = q.get('theme') || (dark ? t.darkTheme : t.lightTheme);
+  document.documentElement.setAttribute('data-theme', theme);
+  if (t.accent) ['--accent', '--accent-hi', '--accent-line'].forEach(function (v) {
+    document.documentElement.style.setProperty(v, t.accent);
+  });
+})();
+</script>
+<link href="css/style.css?v=3" media="screen, projection" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+  <div id="page" class="container">
+    <header class="row">
+      <div class="logo span5 offset3">
+        <h1><a href="./">drkr news</a></h1>
+        <h3>an unofficial, theme-able <a href="https://hckrnews.com">hckr news</a> clone.</h3>
+      </div>
+      <div class="span9 offset1">
+        <ul class="mainnav nav nav-pills pull-right">
+          <li><a class="mode-toggle" href="#" id="mode-toggle" title="cycle color scheme: auto / light / dark">&#9681; auto</a></li>
+          <li><a class="show-settings" href="#settings">settings</a></li>
+          <li><a class="about" href="about.html">about</a></li>
+        </ul>
+      </div>
+    </header>
+
+    <div class="entries io row">
+      <div class="link span15 offset3" id="io"><span>&nbsp;</span></div>
+    </div>
+
+    <div class="menu row" id="menu">
+      <div class="hn span3">
+        <p class="row">
+          <span class="comments span2">comments</span>
+          <span class="points span1">points</span>
+        </p>
+      </div>
+      <div class="span15">
+        <a href="#" class="filters visible-phone" id="filter-toggle">
+          Filter: <span id="filter-label">all</span>
+        </a>
+        <ul class="filters nav nav-pills hidden-phone" id="filter-pills">
+          <li><a href="#" class="filtertop by10" data-num="10">top 10</a></li>
+          <li><a href="#" class="filtertop by20" data-num="20">top 20</a></li>
+          <li><a href="#" class="filtertop byhalf" data-num="half">top 50%</a></li>
+          <li><a href="#" class="filtertop byhomepage" data-num="homepage">homepage</a></li>
+          <li><a href="#" class="filtertop byall" data-num="all">all</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="settings" id="settings-panel" style="display: none;">
+      <div class="row">
+        <div class="span15 offset3">
+          <form class="form-vertical" id="settings-form">
+            <fieldset>
+              <div class="control-group">
+                <label class="control-label">Settings:</label>
+                <div class="controls">
+                  <label class="checkbox">
+                    <input type="checkbox" id="settings-hackerweb"/>
+                    Link comments to HackerWeb? (hackerweb.app)
+                  </label>
+                  <label class="checkbox">
+                    <input type="checkbox" id="settings-newwindow"/>
+                    Links open in new window/tab?
+                  </label>
+                  <label class="checkbox">
+                    <input type="checkbox" id="settings-showdead"/>
+                    Show dead?
+                  </label>
+                </div>
+              </div>
+              <div class="control-group">
+                <label class="control-label">Appearance:</label>
+                <div class="controls">
+                  <div class="theme-row">
+                    <span class="theme-row-label">mode</span>
+                    <span class="mode-pills" id="mode-pills">
+                      <button type="button" data-mode="auto">auto</button>
+                      <button type="button" data-mode="light">light</button>
+                      <button type="button" data-mode="dark">dark</button>
+                    </span>
+                  </div>
+                  <div class="theme-row">
+                    <span class="theme-row-label">light theme</span>
+                    <span class="swatches" id="swatches-light"></span>
+                  </div>
+                  <div class="theme-row">
+                    <span class="theme-row-label">dark theme</span>
+                    <span class="swatches" id="swatches-dark"></span>
+                  </div>
+                  <div class="theme-row">
+                    <span class="theme-row-label">accent</span>
+                    <input type="color" id="accent-color" value="#ff6600"/>
+                    <button type="button" class="btn" id="accent-reset">reset</button>
+                  </div>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary done">Done</button>
+              </div>
+            </fieldset>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="entries"></div>
+
+    <div class="entries io row" id="loading" style="display: none;">
+      <div class="link span15 offset3"><span class="loading-label">loading&hellip;</span></div>
+    </div>
+  </div>
+
+<script src="js/app.js?v=2" type="text/javascript"></script>
+</body>
+</html>

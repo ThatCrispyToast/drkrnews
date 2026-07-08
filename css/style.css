@@ -1,0 +1,506 @@
+/* drkr news — a theme-able clone of hckrnews.com
+   Layout metrics reproduce the original's customized Bootstrap-2 18-column grid.
+   All colors flow through CSS custom properties so themes are pure variable swaps. */
+
+/* ---------------------------------------------------------------- themes --- */
+
+:root,
+[data-theme="classic"] {
+  --bg: #ffffff;
+  --fg: #333333;
+  --muted: #999999;      /* sources, visited links, labels           */
+  --faint: #cccccc;      /* dead stories                             */
+  /* like the original, links render in the text color (visited goes muted) */
+  --link: var(--fg);
+  --visited: #999999;
+  --hover: #f6f7ee;      /* row hover background                     */
+  --accent: #ff6600;     /* the hn orange: tab/pill fills            */
+  --accent-hi: var(--accent);   /* orange as text: points, "N new"   */
+  --accent-line: var(--accent); /* orange as hairline: day rule      */
+  --accent-fg: #ffffff;  /* text on top of the accent color          */
+  --job: #d9a815;
+  --border: #dddddd;
+  --font: 'Lucida Grande', 'Lucida Sans Unicode', 'Lucida Sans', Verdana, Tahoma, sans-serif;
+  color-scheme: light;
+}
+
+[data-theme="sepia"] {
+  --bg: #f4ecd8;
+  --fg: #4b3f2f;
+  --muted: #9a8a76;
+  --faint: #c9bda4;
+  --visited: #9a8a76;
+  --hover: #ece0c4;
+  --accent: #c1571c;
+  --accent-fg: #f8f2e4;
+  --job: #a88214;
+  --border: #d8cbae;
+  color-scheme: light;
+}
+
+[data-theme="solarized-light"] {
+  --bg: #fdf6e3;
+  --fg: #586e75;
+  --muted: #93a1a1;
+  --faint: #d5cdb4;
+  --visited: #93a1a1;
+  --hover: #eee8d5;
+  --accent: #cb4b16;
+  --accent-fg: #fdf6e3;
+  --job: #b58900;
+  --border: #e5dcc1;
+  color-scheme: light;
+}
+
+[data-theme="drkr"] {
+  --bg: #181a1b;
+  --fg: #c8c3bc;
+  --muted: #a8a095;
+  --faint: #5c5852;
+  --visited: #a8a095;
+  --hover: #212426;
+  --accent: #cc5200;
+  --accent-hi: #ff751a;
+  --accent-line: #b34700;
+  --accent-fg: #e8e6e3;
+  --job: #d9b13c;
+  --border: #2c2f31;
+  color-scheme: dark;
+}
+
+[data-theme="dracula"] {
+  --bg: #282a36;
+  --fg: #f8f8f2;
+  --muted: #6272a4;
+  --faint: #44475a;
+  --visited: #7a7f95;
+  --hover: #343746;
+  --accent: #ffb86c;
+  --accent-fg: #282a36;
+  --job: #f1fa8c;
+  --border: #44475a;
+  color-scheme: dark;
+}
+
+[data-theme="nord"] {
+  --bg: #2e3440;
+  --fg: #d8dee9;
+  --muted: #7b88a1;
+  --faint: #4c566a;
+  --visited: #767e8f;
+  --hover: #3b4252;
+  --accent: #d08770;
+  --accent-fg: #2e3440;
+  --job: #ebcb8b;
+  --border: #434c5e;
+  color-scheme: dark;
+}
+
+[data-theme="solarized-dark"] {
+  --bg: #002b36;
+  --fg: #93a1a1;
+  --muted: #586e75;
+  --faint: #21454e;
+  --visited: #5b7077;
+  --hover: #073642;
+  --accent: #cb4b16;
+  --accent-fg: #fdf6e3;
+  --job: #b58900;
+  --border: #0a3d4a;
+  color-scheme: dark;
+}
+
+[data-theme="terminal"] {
+  --bg: #0a0f0a;
+  --fg: #33d17a;
+  --muted: #1e7a46;
+  --faint: #14522f;
+  --visited: #1e7a46;
+  --hover: #10190f;
+  --accent: #33d17a;
+  --accent-fg: #0a0f0a;
+  --job: #e5a50a;
+  --border: #14522f;
+  --font: 'DejaVu Sans Mono', Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+/* ----------------------------------------------------------------- base --- */
+
+* { margin: 0; padding: 0; box-sizing: content-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding-bottom: 40px;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--fg);
+  background-color: var(--bg);
+  transition: background-color .15s ease, color .15s ease;
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* bootstrap-2 base: paragraphs carry a 10px bottom margin (sizes the menu row;
+   .entries p zeroes it back out, exactly like the original) */
+p { margin: 0 0 10px; }
+
+ul { list-style: none; }
+fieldset { border: 0; }
+
+/* ----------------------------------------------------------------- grid --- */
+/* default: 980-1199px viewport — 934px container, 33px columns, 20px gutters */
+
+.container { width: 934px; margin: 0 auto; }
+
+.row { margin-left: -20px; }
+.row:before, .row:after { display: table; content: ""; }
+.row:after { clear: both; }
+
+[class*="span"] { float: left; margin-left: 20px; }
+
+.span1  { width: 33px; }
+.span2  { width: 86px; }
+.span3  { width: 139px; }
+.span5  { width: 245px; }
+.span9  { width: 457px; }
+.span15 { width: 775px; }
+
+.offset1 { margin-left: 73px; }
+.offset3 { margin-left: 179px; }
+
+.pull-right { float: right; }
+.pull-left { float: left; }
+
+.visible-phone { display: none !important; }
+
+/* wide desktop: >=1200px — 1145px container, 40px columns, 25px gutters */
+@media (min-width: 1200px) {
+  .container { width: 1145px; }
+  .row { margin-left: -25px; }
+  [class*="span"] { margin-left: 25px; }
+  .span1  { width: 40px; }
+  .span2  { width: 105px; }
+  .span3  { width: 170px; }
+  .span5  { width: 300px; }
+  .span9  { width: 560px; }
+  .span15 { width: 950px; }
+  .offset1 { margin-left: 90px; }
+  .offset3 { margin-left: 220px; }
+}
+
+/* tablet + phone overrides live at the END of this file — the original ships
+   them in bootstrap-responsive.css, loaded after everything else, and several
+   rules (e.g. phone .entries .source 10px, .span15 vs .offset3) rely on that
+   cascade order. Don't move them up. */
+
+/* --------------------------------------------------------------- header --- */
+
+header {
+  padding-top: 24px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+[data-theme="terminal"] header { font-family: var(--font); }
+
+header h1 { font-size: 24px; line-height: 24px; font-weight: normal; }
+header h1 a { color: var(--fg); text-decoration: none; }
+header h3 { font-weight: normal; font-size: 12px; line-height: 12px; }
+header h3 a, header a { text-decoration: underline; color: var(--link); }
+
+/* bootstrap .nav keeps its 20px bottom margin in the header (it sets the
+   header's height); .menu .nav zeroes it, exactly like the original */
+.nav { margin-left: 0; margin-bottom: 20px; }
+.nav-pills:before, .nav-pills:after { display: table; content: ""; }
+.nav-pills:after { clear: both; }
+.nav-pills > li { float: left; }
+.nav-pills > li > a {
+  display: block;
+  padding: 8px 12px;
+  margin: 2px 2px 2px 0;
+  line-height: 14px;
+  border-radius: 5px;
+  color: var(--link);
+}
+.nav-pills > li > a:hover { background-color: var(--hover); text-decoration: none; }
+.nav-pills > .active > a,
+.nav-pills > .active > a:hover {
+  color: var(--accent-fg);
+  background-color: var(--accent);
+}
+.mainnav a { text-decoration: underline; }
+.mainnav a.mode-toggle { text-decoration: none; color: var(--muted); }
+.mainnav a.mode-toggle:hover { color: var(--fg); background-color: var(--hover); }
+
+/* ----------------------------------------------------------- io / menu --- */
+
+.io a { text-decoration: underline; }
+.io a.new { color: var(--accent-hi); font-weight: bold; }
+.io .loading-label, .io a.error { color: var(--muted); }
+
+.menu .hn { font-size: 10px; color: var(--muted); }
+.menu .nav { margin-bottom: 0; }
+
+.filters { float: right; }
+a.filters { text-decoration: underline; color: var(--link); }
+.filters span, #filter-label {
+  background-color: var(--accent);
+  padding: 2px 5px 4px 5px;
+  border-radius: 5px;
+  color: var(--accent-fg);
+  text-align: center;
+}
+
+/* phone filter dropdown: tapping "Filter:" reveals the pills as a stacked menu */
+@media (max-width: 767px) {
+  .menu { position: relative; }
+  .menu.open ul.filters {
+    display: block !important;
+    position: absolute;
+    right: 0;
+    top: 28px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 4px;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+  .menu.open ul.filters li { display: block; float: none; }
+  .menu.open ul.filters li a { display: block; }
+}
+
+/* -------------------------------------------------------------- entries --- */
+
+ul.entries { margin-bottom: 0; }
+.entries p { margin-bottom: 0; }
+.entries a { padding: 6px 0; }
+
+.comments { text-align: right; }
+.points { text-align: right; }
+.entries .homepage { color: var(--accent-hi); }
+
+.entries a:hover {
+  text-decoration: none;
+  background-color: var(--hover);
+}
+.entries a.hn:visited,
+.entries a.link:visited { color: var(--visited); }
+
+.entries .source { color: var(--muted); font-size: 12px; }
+
+.entries .dead { font-size: 10px; color: var(--faint); }
+.entries .dead .source { color: var(--faint); }
+.entries a.link.dead::before {
+  padding: 3px 5px;
+  margin-right: 5px;
+  content: 'DEAD';
+}
+
+.entries .job { font-size: 12px; }
+.entries a.link.job::before {
+  content: 'JOB';
+  padding: 3px 5px 3px 0;
+  margin-right: 5px;
+  color: var(--job);
+}
+
+/* a story that arrived via auto-refresh gets a brief highlight */
+.entries .added a.link { animation: added-fade 2.5s ease-out; }
+@keyframes added-fade {
+  from { background-color: var(--hover); }
+  to   { background-color: transparent; }
+}
+
+/* day separator: orange tab sitting on an orange rule */
+.entries .day {
+  border-bottom: 1px solid var(--accent-line);
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+/* inline (not inline-block): the padding overflows the line box instead of
+   inflating the row, matching the original's 21px-tall day rule */
+.entries .day .tab {
+  background-color: var(--accent);
+  padding: 2px 5px 4px 5px;
+  border-radius: 5px 5px 0 0;
+  text-align: center;
+  color: var(--accent-fg);
+}
+
+/* time-of-day marker (6am / 12pm / 6pm) floating in the left gutter —
+   plain text in the original (bootstrap's .label component isn't in its CSS) */
+.entries .time { position: relative; }
+.entries .time .label {
+  position: absolute;
+  left: 0;
+  top: -14px;
+}
+
+/* last-visit separator: grey cousin of the day tab, click to dismiss */
+.entries .lastvisit {
+  border-bottom: 1px solid var(--muted);
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+.entries a.lastvisit { padding: 0; text-decoration: none; }
+.entries a.lastvisit:hover { background-color: transparent; }
+.entries .lastvisit .label {
+  background-color: var(--muted);
+  padding: 2px 5px 4px 5px;
+  border-radius: 5px 5px 0 0;
+  text-align: center;
+  color: var(--bg);
+}
+
+/* ------------------------------------------------------------- settings --- */
+
+.settings {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  padding: 8px 0 16px 0;
+}
+
+.settings .control-label {
+  display: block;
+  font-weight: bold;
+  margin: 12px 0 6px 0;
+}
+.settings .checkbox {
+  display: block;
+  margin: 4px 0;
+  cursor: pointer;
+}
+.settings .checkbox input { margin-right: 6px; }
+
+.settings .form-actions { margin-top: 16px; }
+
+.btn {
+  display: inline-block;
+  padding: 4px 12px;
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--fg);
+  background-color: var(--hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--muted); }
+.btn-primary {
+  color: var(--accent-fg);
+  background-color: var(--accent);
+  border-color: transparent;
+}
+.btn-primary:hover { opacity: 0.9; }
+
+.theme-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0;
+}
+.theme-row-label {
+  width: 90px;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mode-pills button {
+  font-family: var(--font);
+  font-size: 12px;
+  padding: 4px 12px;
+  margin-right: 2px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--link);
+  cursor: pointer;
+}
+.mode-pills button.active {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-fg);
+}
+
+/* each swatch carries its own data-theme, so it previews that theme's palette */
+.swatch {
+  font-family: var(--font);
+  font-size: 11px;
+  line-height: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+.swatch .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.swatch.selected { box-shadow: 0 0 0 2px var(--accent); }
+
+input[type="color"] {
+  width: 40px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- about --- */
+
+.prose { margin-top: 16px; }
+.prose h2 { font-size: 16px; margin: 16px 0 4px 0; }
+.prose p, .prose ul { margin-bottom: 8px; }
+.prose ul { list-style: disc; margin-left: 20px; }
+.prose a { text-decoration: underline; }
+
+/* ----------------------------------------------------- responsive (last) --- */
+/* Mirrors the original's bootstrap-responsive.css, which loads after the main
+   stylesheet — rule ORDER inside and relative to the rules above is load-bearing:
+   phone .offset3 must lose to the later .span15 margin, and phone
+   .entries .source { 10px } must beat the base 12px rule above. */
+
+/* tablet: 768-979px — fluid; the span5 logo column keeps floating */
+@media (min-width: 768px) and (max-width: 979px) {
+  body { padding-left: 20px; padding-right: 20px; }
+  .container { width: auto; }
+  .span9 { float: none; display: block; width: auto; }
+  .span15 { float: none; display: block; width: auto; margin-left: 180px; }
+  .entries .time .label { left: -10px; }
+}
+
+/* phone: <768px */
+@media (max-width: 767px) {
+  .entries .source { font-size: 10px; }
+  header h1 { padding-left: 20px; }
+  header h3 { display: none; }
+  .entries .time { display: none; }
+  body { padding-left: 10px; padding-right: 10px; }
+  .container { width: auto; }
+  .span1 { width: 22px; }
+  .span2 { width: 42px; }
+  .span3 { width: 84px; }
+  .span5 { width: 150px; }
+  .span9, .span18 { float: none; display: block; width: auto; }
+  .offset1 { margin-left: 13px; }
+  .offset3 { margin-left: 13px; }
+  .span15 { float: none; display: block; width: auto; margin-left: 124px; }
+  .visible-phone { display: inherit !important; }
+  .hidden-phone { display: none !important; }
+}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>about - drkr news</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23ff6600'/%3E%3Ctext x='16' y='24' font-family='Verdana,sans-serif' font-size='22' fill='%23fff' text-anchor='middle'%3Ed%3C/text%3E%3C/svg%3E"/>
+<script>
+(function () {
+  var t = { mode: 'auto', lightTheme: 'classic', darkTheme: 'drkr', accent: null };
+  try {
+    var s = JSON.parse(localStorage.getItem('drkrnews:v1') || '{}');
+    for (var k in t) if (s[k] !== undefined) t[k] = s[k];
+  } catch (e) {}
+  var dark = t.mode === 'dark' || (t.mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme', dark ? t.darkTheme : t.lightTheme);
+  if (t.accent) ['--accent', '--accent-hi', '--accent-line'].forEach(function (v) {
+    document.documentElement.style.setProperty(v, t.accent);
+  });
+})();
+</script>
+<link href="css/style.css?v=3" media="screen, projection" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+  <div id="page" class="container">
+    <header class="row">
+      <div class="logo span5 offset3">
+        <h1><a href="./">drkr news</a></h1>
+        <h3>an unofficial, theme-able <a href="https://hckrnews.com">hckr news</a> clone.</h3>
+      </div>
+      <div class="span9 offset1">
+        <ul class="mainnav nav nav-pills pull-right">
+          <li><a href="./">home</a></li>
+        </ul>
+      </div>
+    </header>
+
+    <div class="row">
+      <div class="prose span15 offset3">
+        <h2>What is this?</h2>
+        <p>
+          drkr news is a clone of <a href="https://hckrnews.com">hckrnews.com</a>
+          (Wayne Larsen's alternative Hacker News interface), rebuilt as a small
+          static site with one addition the original never had: dark mode and
+          customizable themes.
+        </p>
+        <p>
+          Like the original, stories are sorted by submission time — not rank —
+          and grouped by day, so you can read down the page and always know
+          where you stopped. The left column links to the comment thread, the
+          title links to the story.
+        </p>
+
+        <h2>Filters</h2>
+        <ul>
+          <li><b>top 10 / top 20</b> — the N highest-scoring stories of each day</li>
+          <li><b>top 50%</b> — the better half of each day</li>
+          <li><b>homepage</b> — only stories currently on the HN front page</li>
+          <li><b>all</b> — every story that got a little traction (&ge;5 points), plus jobs</li>
+        </ul>
+
+        <h2>Themes</h2>
+        <p>
+          Open <b>settings</b> to pick separate light and dark themes
+          (classic, sepia, solarized, dracula, nord, terminal&hellip;), pick an
+          accent color, or let the mode follow your system preference. The
+          &#9681; toggle in the header cycles auto / light / dark.
+        </p>
+
+        <h2>Data</h2>
+        <p>
+          Like the original, this is a chronologic list of stories that made
+          it onto the Hacker News homepage, ordered by when they first got
+          there. Recent days come straight from
+          <a href="https://hckrnews.com">hckrnews.com</a>'s own feed; days
+          further back are approximated from the
+          <a href="https://hn.algolia.com/api">HN Algolia API</a> (&ge;20
+          points, ordered by submission time), with the front-page flag from
+          the official
+          <a href="https://github.com/HackerNews/API">Firebase API</a>. No
+          backend, no tracking; your settings live in localStorage.
+        </p>
+        <p>
+          Not affiliated with Y Combinator or hckrnews.com.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
