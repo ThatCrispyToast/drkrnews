@@ -31,11 +31,24 @@ A pure static site — no backend, no build step — so any static file server o
 static host works. Edit the files and re-serve the directory; there's nothing
 to compile.
 
-**Cache busting**: assets aren't content-hashed, so browsers (especially the
-iOS PWA) cache CSS/JS aggressively. They're referenced as
-`css/style.css?v=N` / `js/app.js?v=N` — **bump `N` in BOTH `index.html` and
-`about.html` whenever you change that asset**. That's the whole deploy step
-(the original does the same thing with hashed filenames).
+**Cache busting**: assets aren't content-hashed, so browsers (especially an
+installed iOS PWA) cache CSS/JS aggressively. They're referenced as
+`css/style.css?v=N` / `js/app.js?v=N` (and the favicon/manifest links as
+`?v=N` too) — **bump `N` in BOTH `index.html` and `about.html` whenever you
+change that asset**. That's the whole deploy step (the original does the same
+thing with hashed filenames).
+
+**Favicons**: `favicon.svg` is the hand-authored vector source — the "Moonlit"
+mark: drkr's dark field (`#181a1b`) + a two-tone geometric `d` (a dim ring
+`#a83c00` with its left half over-painted bright `#ff8a33`, plus a bright stem),
+echoing the ◐ mode toggle and drkr's split accent. Drawn as shapes (circle +
+rects), not text, so it's font-independent. The raster set derives from it — `favicon.ico` (16/32/48), `favicon-96x96.png`,
+`apple-touch-icon.png` (180, full-bleed opaque square; iOS masks its own
+corners), and `web-app-manifest-{192,512}.png` (referenced by
+`site.webmanifest` for install-as-PWA). No rasterizer/Pillow is assumed:
+regenerate the PNGs by screenshotting the SVG in headless Chromium at each size
+and pack the `.ico` by hand (PNG-in-ICO). Edit `favicon.svg`, re-derive, and
+bump the `?v=` on the icon links in both HTML files.
 
 ## The prime directive: fidelity to the original
 

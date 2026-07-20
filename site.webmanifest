@@ -1,0 +1,14 @@
+{
+  "name": "drkr news",
+  "short_name": "drkr",
+  "description": "An unofficial, theme-able clone of hckrnews.com - Hacker News sorted by time, with dark mode and customizable themes.",
+  "icons": [
+    { "src": "web-app-manifest-192x192.png?v=2", "sizes": "192x192", "type": "image/png" },
+    { "src": "web-app-manifest-512x512.png?v=2", "sizes": "512x512", "type": "image/png" }
+  ],
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff"
+}
