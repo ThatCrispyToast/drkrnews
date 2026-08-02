@@ -34,7 +34,8 @@
     filter: 'all',
     hackerweb: false,
     newwindow: false,
-    showdead: false,
+    // the original shows dead entries on first paint, so that's our default too
+    showdead: true,
     mode: 'auto',
     lightTheme: 'classic',
     darkTheme: 'drkr',
@@ -42,8 +43,6 @@
     lastVisit: null,
     read: {}
   };
-  // the original shows dead entries on first paint, so that's our default too
-  DEFAULTS.showdead = true;
   var STATE_VERSION = 2;
 
   /* ------------------------------------------------------------- state --- */
@@ -57,7 +56,6 @@
   var allEntries = [];                  // merged feed, sorted by date desc
   var byId = {};                        // id -> entry
   var oldestLoadedUtcDay = null;        // 'YYYYMMDD' of the oldest loaded UTC day
-  var feedOk = false;                   // latest.js loaded at least once
   var loadingOlder = false;
   var loadedUtcDayCount = 0;
   var pendingNew = [];                  // entries waiting behind the "N new" link
@@ -265,8 +263,10 @@
     var hn = document.createElement('a');
     hn.id = 'hn-' + entry.id;
     hn.className = 'hn span3 ' + entry.type + deadCls;
-    hn.href = 'https://news.ycombinator.com/item?id=' + entry.id;
-    if (!entry.dead && state.hackerweb) hn.href = hnHref(entry);
+    // dead threads always point at HN itself — HackerWeb has nothing to show
+    hn.href = entry.dead
+      ? 'https://news.ycombinator.com/item?id=' + entry.id
+      : hnHref(entry);
     hn.setAttribute('data-date', entry.date);
     hn.setAttribute('data-id', entry.id);
     setLinkTarget(hn);
@@ -405,9 +405,8 @@
       if (li.classList.contains('entry')) {
         var e = byId[li.id];
         li.style.display = e && entryVisible(e, thresholds) ? '' : 'none';
-      } else if (li.classList.contains('time')) {
-        li.style.display = showTime ? '' : 'none';
-      } else if (li.classList.contains('lastvisit')) {
+      } else if (li.classList.contains('time') || li.classList.contains('lastvisit')) {
+        // separators only make sense when the stream isn't score-filtered
         li.style.display = showTime ? '' : 'none';
       }
     });
@@ -471,7 +470,6 @@
   function loadInitial() {
     $loading.style.display = '';
     return loadHckrFeed().then(function (entries) {
-      feedOk = true;
       merge(entries);
       var oldest = utcDayKey(entries[entries.length - 1].date);
       // if the feed was truncated mid-day, backfill that day from Algolia
@@ -541,7 +539,6 @@
      newly arrived stories behind an "N new" link. */
   function refresh() {
     loadHckrFeed().then(function (entries) {
-      feedOk = true;
       var freshOnes = [];
       entries.forEach(function (e) {
         var known = byId[e.id];
@@ -567,7 +564,8 @@
       pendingNew = pendingNew.concat(freshOnes);
       if (pendingNew.length) showNewCount();
     }).catch(function () {
-      if (feedOk) return;   // one bad poll isn't worth an error banner
+      /* Deliberately silent: a single bad poll isn't worth an error banner,
+         and the already-rendered stream stays put until the next tick. */
     });
   }
 
