@@ -28,8 +28,8 @@ Everything the original does:
 - Comments and points columns linking to the thread; points turn orange
   while a story is on the front page; unread-comment counts (`12 / 146`)
   for threads you've opened before
-- A "last visit" marker, infinite scroll into previous days, and
-  auto-refresh with an "N new stories" link
+- A "last visit" marker, infinite scroll back through previous days (up to
+  14), and auto-refresh with an "N new stories" link
 - Settings: HackerWeb comment links, open links in a new window, show dead
 - The original's desktop, tablet, and phone breakpoints
 
@@ -60,7 +60,8 @@ The clone reproduces this exactly for the visible feed:
   by infinite scroll. Front-page arrival times aren't public, so these days
   are approximated: stories submitted that UTC day with at least 20 points,
   ordered by submission time. Fitted against real hckrnews day files
-  (F1 about 0.7). Also the fallback if the feed is unreachable.
+  (F1 about 0.7). It is also the fallback if the feed is unreachable, there
+  at a gentler 10-point bar so today and yesterday still fill up.
 - The [official Firebase API](https://github.com/HackerNews/API) for the
   current top-30 list, which supplies the homepage flag on approximated
   days.

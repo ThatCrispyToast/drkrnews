@@ -82,13 +82,18 @@ Non-obvious semantics that took real digging (don't re-break these):
    injection — it's JSONP-style (`var entries = [...]`), which sidesteps
    CORS (their day files are plain JSON and NOT fetchable from a browser;
    don't try). Covers current + previous UTC day, exactly matching the
-   original. Re-polled every 4 min (cache-busted) for count updates and the
-   "N new stories" link.
+   original. Re-polled every 4 min (`POLL_MS`, cache-busted) for count
+   updates and the "N new stories" link. If its oldest entry lands more than
+   2 h into that UTC day the feed is treated as truncated and the day is
+   backfilled from Algolia.
 2. **Archive** (infinite scroll) & full fallback: HN Algolia
-   `search_by_date`, one UTC day per query pair (stories ≥20 points + jobs),
-   `date := created_at_i`. This is an approximation (front-page arrival
-   times aren't public) fitted against real day files, F1 ≈ 0.7. Percent-
-   encode `<`/`>` in `numericFilters` or Algolia's proxy 400s.
+   `search_by_date`, one UTC day per query pair (stories ≥
+   `ARCHIVE_MIN_POINTS` = 20, plus jobs), `date := created_at_i`. This is an
+   approximation (front-page arrival times aren't public) fitted against real
+   day files, F1 ≈ 0.7. The feed-down fallback reuses it for today +
+   yesterday at a gentler `FALLBACK_MIN_POINTS` = 10; infinite scroll stops
+   at `MAX_DAYS` = 14 UTC days. Percent-encode `<`/`>` in `numericFilters` or
+   Algolia's proxy 400s.
 3. Firebase `topstories.json` (top 30) supplies `homepage` for archive rows.
 4. `merge()` dedups by id; feed (`exact: true`) data always wins.
 
