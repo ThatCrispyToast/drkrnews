@@ -125,6 +125,12 @@
   color-scheme: dark;
 }
 
+/* The page's own accent, captured on :root only. Theme swatches carry their own
+   data-theme (so each previews its palette), which locally rebinds --accent —
+   chrome that must stay in the *page's* accent, like the swatch selection ring,
+   reads this instead. */
+:root { --ui-accent: var(--accent); }
+
 /* ----------------------------------------------------------------- base --- */
 
 * { margin: 0; padding: 0; box-sizing: content-box; }
@@ -403,7 +409,7 @@ ul.entries { margin-bottom: 0; }
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 6px 0;
+  margin: 8px 0;
 }
 .theme-row-label {
   width: 90px;
@@ -412,11 +418,27 @@ ul.entries { margin-bottom: 0; }
   font-size: 12px;
 }
 
+/* Both chip rows need an explicit gap: the swatches are appended from JS with no
+   whitespace between them, so without one their 1px borders touch outright and
+   the .selected ring bleeds onto the neighbour. Wrapping rows need the row-gap
+   for the same reason. Taking the remaining width (rather than leaving the flex
+   item at max-content) keeps a long row wrapping inside itself instead of
+   dropping below its label. */
+.mode-pills,
+.swatches,
+.theme-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .mode-pills button {
   font-family: var(--font);
   font-size: 12px;
   padding: 4px 12px;
-  margin-right: 2px;
   border: 1px solid var(--border);
   border-radius: 5px;
   background: var(--bg);
@@ -450,7 +472,10 @@ ul.entries { margin-bottom: 0; }
   border-radius: 50%;
   background: var(--accent);
 }
-.swatch.selected { box-shadow: 0 0 0 2px var(--accent); }
+/* ring in the *page* accent, matching the active mode pill — the swatch's own
+   --accent is already spoken for by its dot, and reusing it here would tint the
+   selection marker differently in every theme */
+.swatch.selected { box-shadow: 0 0 0 2px var(--ui-accent); }
 
 input[type="color"] {
   width: 40px;
@@ -503,4 +528,20 @@ input[type="color"] {
   .span15 { float: none; display: block; width: auto; margin-left: 124px; }
   .visible-phone { display: inherit !important; }
   .hidden-phone { display: none !important; }
+
+  /* The 124px above buys story titles room to clear the comments/points
+     columns. The settings form and the about prose have no such columns, so on
+     a phone that offset is just under a third of the screen thrown away — drop
+     them back to the plain column margin, which (against .row's -20px) lands
+     them flush with the comments/points column. Must stay after .span15. */
+  .settings .span15,
+  .prose.span15 { margin-left: 20px; }
+
+  /* stack label over control, and give the chips a real touch target */
+  .theme-row { display: block; margin: 12px 0; }
+  .theme-row-label { display: block; width: auto; margin-bottom: 5px; }
+  .swatch,
+  .mode-pills button { padding: 8px 12px; }
+  .theme-row input[type="color"] { width: 48px; height: 34px; }
+  .theme-row .btn { padding: 8px 12px; }
 }

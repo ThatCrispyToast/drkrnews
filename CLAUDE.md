@@ -116,6 +116,14 @@ drkr splits them (Dark Reader-style two-tone); other themes inherit via
 FOUC-prevention inline scripts (in BOTH `index.html` and `about.html` —
 keep them in sync) set all three.
 
+Each theme swatch in settings carries its own `data-theme`, so it previews
+that palette — which means `--accent` *inside a swatch* is that theme's
+accent (correct for its dot, wrong for anything else). `--ui-accent`, set on
+`:root` only, carries the page's accent past those local rebinds; the swatch
+selection ring uses it so the marker matches the active mode pill instead of
+changing color per theme. Chrome that must stay in the page's accent belongs
+on `--ui-accent`, not `--accent`.
+
 Grid = the original's customized Bootstrap-2 18-column metrics, hand-carried
 at four breakpoints (<768, 768–979, 980–1199 default, ≥1200). Don't swap in
 flexbox/grid "modernizations" — pixel parity with the original matters.
@@ -142,6 +150,16 @@ Pixel-parity subtleties, verified against the live site's computed styles
   menu row to 34px; `.entries p` zeroes it back for story rows.
 - The header `<h3>` subtitle must fit ONE 12px line at the default
   breakpoint (300px column) — keep it short.
+- **Phone `.span15`'s 124px offset is for story rows only.** It exists so
+  titles clear the comments/points columns; the settings form and the about
+  prose have no such columns, so they override it back to the plain 20px
+  column margin (which, against `.row`'s -20px, lands them flush with the
+  comments/points column). Without that they lose ~30% of a 390px screen.
+- **The appearance chip rows (`.mode-pills`/`.swatches`/`.theme-controls`)
+  must set their own `gap`** — swatches are appended from JS with no
+  whitespace between them, so absent a gap their borders touch and the
+  `.selected` ring bleeds onto the neighbor. Don't rely on inline whitespace
+  the way the hand-written `.mode-pills` buttons once did.
 
 When checking parity, diff computed styles in a headless browser
 (`getBoundingClientRect` + `getComputedStyle` on matching selectors at 1440px
