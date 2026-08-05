@@ -412,17 +412,35 @@ ul.entries { margin-bottom: 0; }
 }
 .btn-primary:hover { opacity: 0.9; }
 
-/* ---- redirects: one row per service, name on the left, instance on the right */
+/* ---- redirects ---------------------------------------------------------- */
+/* The twelve-row list is the biggest thing in this panel by far and almost
+   nobody needs it twice, so it collapses behind one muted line: which sites are
+   being rewritten, and the link that opens the rest. */
+
+.redirect-summary {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 15px;
+  /* line up under the checkbox labels above, past the box itself */
+  margin: 0 0 4px 19px;
+}
+.redirect-summary a { color: var(--muted); text-decoration: underline; }
+.redirect-summary a:hover { color: var(--fg); }
+/* the separator belongs to the names, so switching the master off — which
+   empties them — doesn't leave a dash dangling in front of the link */
+#redirect-names:not(:empty)::after { content: " — "; }
+
+.redirect-detail { margin: 8px 0 4px 0; }
 
 .redirect-help {
   color: var(--muted);
   font-size: 11px;
   line-height: 15px;
-  margin: 2px 0 8px 0;
+  margin: 0 0 8px 0;
   max-width: 520px;
 }
 
-.redirect-list { margin-bottom: 12px; }
+.redirect-list { margin-bottom: 10px; }
 .redirect-list.disabled { opacity: 0.45; }
 
 .redirect-row {
@@ -430,8 +448,14 @@ ul.entries { margin-bottom: 0; }
   align-items: baseline;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 3px 0;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border-radius: 4px;
 }
+/* twelve near-identical rows are hard to track across; the same hover the story
+   rows use ties a name to its instance */
+.redirect-row:hover { background-color: var(--hover); }
+.redirect-list.disabled .redirect-row:hover { background-color: transparent; }
 .redirect-name {
   flex: 1 1 240px;
   min-width: 0;

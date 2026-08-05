@@ -44,15 +44,16 @@
     lastVisit: null,
     read: {}
   };
-  var STATE_VERSION = 3;
+  var STATE_VERSION = 4;
 
   /* ------------------------------------------------ alternate front ends --- */
   /* Story links can be pointed at a privacy-respecting mirror instead of the
-     site itself. The rule behind the defaults: anything that withholds basic
-     reading from logged-out visitors (`gated` — X hides replies, Reddit's
-     mobile site blocks the page outright) is rewritten out of the box, and
-     everything else is offered but left off. Two gated services override that
-     with an explicit `on: false`; their notes say why.
+     site itself. The feature is opt-in: nothing is rewritten until the switch
+     in settings is on. What it rewrites once it is on is the rule below —
+     anything that withholds basic reading from logged-out visitors (`gated` —
+     X hides replies, Reddit's mobile site blocks the page outright), and
+     nothing else. Two gated services override that with an explicit
+     `on: false`; their notes say why.
 
      A service claims a host when the host equals one of its `hosts` or is a
      subdomain of one, minus anything in `skip`. Where the front end's URL
@@ -279,7 +280,7 @@
         instance: typeof s.instance === 'string' ? s.instance : svc.instances[0].url
       };
     });
-    return { on: typeof saved.on === 'boolean' ? saved.on : true, services: services };
+    return { on: saved.on === true, services: services };
   }
 
   /* Where a story link should really go, or null to leave it alone. */
@@ -331,8 +332,12 @@
     // pre-v2 saves predate showdead defaulting on; migrate once
     if ((s._v || 1) < 2) out.showdead = true;
     // v3 added `redirects`; missing and partial saves fill themselves in, so
-    // there is nothing to migrate — the version just records the shape change
+    // the shape itself never needs migrating
     out.redirects = normalizeRedirects(s.redirects);
+    // …but v3 shipped them ON by default and v4 made the whole thing opt-in.
+    // Clear that inherited default once, so nobody keeps a feature they were
+    // never asked about; anyone who wants it back is one checkbox away.
+    if ((s._v || 1) < 4) out.redirects.on = false;
     out._v = STATE_VERSION;
     return out;
   }
@@ -961,12 +966,35 @@
     });
   }
 
-  /* Push state into the controls: the master switch, each service's checkbox,
-     and the instance select — which falls back to the custom field whenever the
-     saved instance isn't one we ship. */
+  /* The one-line stand-in for the whole list while it's collapsed: which sites
+     are actually being rewritten, cut off before it can wrap on a phone. */
+  function redirectNames() {
+    var chosen = FRONTENDS.filter(function (svc) {
+      return state.redirects.services[svc.id].on;
+    });
+    if (!chosen.length) return 'nothing selected';
+    var shown = chosen.slice(0, 4).map(function (svc) { return svc.name; });
+    return shown.join(', ') +
+      (chosen.length > shown.length ? ' +' + (chosen.length - shown.length) + ' more' : '');
+  }
+
+  function showRedirectDetail(open) {
+    var toggle = document.getElementById('redirect-toggle');
+    document.getElementById('redirect-detail').style.display = open ? '' : 'none';
+    toggle.textContent = open ? 'hide' : 'customize';
+    toggle.setAttribute('aria-expanded', String(open));
+  }
+
+  /* Push state into the controls: the master switch, the collapsed summary,
+     each service's checkbox, and the instance select — which falls back to the
+     custom field whenever the saved instance isn't one we ship. */
   function syncRedirectUi() {
     var on = state.redirects.on;
     document.getElementById('settings-redirect').checked = on;
+    // switched off, the useful answer is what this would do, not a list of
+    // sites nothing is happening to
+    document.getElementById('redirect-names').textContent =
+      on ? redirectNames() : FRONTENDS.length + ' sites available';
     var list = document.getElementById('redirect-list');
     list.classList.toggle('disabled', !on);
 
@@ -985,6 +1013,11 @@
   }
 
   function wireRedirects() {
+    document.getElementById('redirect-toggle').addEventListener('click', function (ev) {
+      ev.preventDefault();
+      showRedirectDetail(document.getElementById('redirect-detail').style.display === 'none');
+    });
+
     var master = document.getElementById('settings-redirect');
     master.addEventListener('change', function () {
       state.redirects.on = master.checked;
@@ -997,23 +1030,26 @@
       var el = ev.target;
       var cfg = state.redirects.services[el.dataset.svc || ''];
       if (!cfg) return;
+      var field = el.parentNode.querySelector('input[type="url"]');
+      var pickedCustom = false;
       if (el.type === 'checkbox') {
         cfg.on = el.checked;
       } else if (el.tagName === 'SELECT') {
-        var field = el.parentNode.querySelector('input[type="url"]');
-        var custom = el.value === CUSTOM;
-        field.style.display = custom ? '' : 'none';
-        cfg.instance = custom ? field.value.trim() : el.value;
-        if (custom) field.focus();
+        pickedCustom = el.value === CUSTOM;
+        cfg.instance = pickedCustom ? field.value.trim() : el.value;
       } else {
         cfg.instance = el.value.trim();
       }
       saveState();
+      syncRedirectUi();          // the collapsed summary has to stay truthful
+      if (pickedCustom) field.focus();
       renderStream();
     });
 
+    // this button lives inside the per-service list, so it restores the per-service
+    // defaults only — the master switch above it isn't its business to flip
     document.getElementById('redirect-reset').addEventListener('click', function () {
-      state.redirects = normalizeRedirects(null);
+      state.redirects = normalizeRedirects({ on: state.redirects.on });
       saveState();
       syncRedirectUi();
       renderStream();
@@ -1136,7 +1172,7 @@
 
   function boot() {
     // one-off URL overrides, mostly for sharing/screenshots:
-    //   ?theme=dracula  ?mode=dark  ?filter=10  ?settings=open  ?redirects=off
+    //   ?theme=dracula  ?mode=dark  ?filter=10  ?settings=open  ?redirects=off|open
     var q = new URLSearchParams(location.search);
     if (q.get('mode') && ['auto', 'light', 'dark'].indexOf(q.get('mode')) !== -1) {
       state.mode = q.get('mode');
@@ -1147,13 +1183,15 @@
       if (THEMES.dark.indexOf(t) !== -1) { state.darkTheme = t; state.mode = 'dark'; }
     }
     if (q.get('filter')) state.filter = q.get('filter');
-    if (q.get('redirects')) state.redirects.on = q.get('redirects') !== 'off';
+    var redirects = q.get('redirects');   // on | off | open (open leaves the switch alone)
+    if (redirects === 'on' || redirects === 'off') state.redirects.on = redirects === 'on';
 
     buildSwatches();
     buildRedirectRows();
     wireEvents();
     wireRedirects();
     syncRedirectUi();
+    if (redirects === 'open') showRedirectDetail(true);
     applyTheme();
     applyFilter();
 

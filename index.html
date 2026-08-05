@@ -29,7 +29,7 @@
   });
 })();
 </script>
-<link href="css/style.css?v=5" media="screen, projection" rel="stylesheet" type="text/css"/>
+<link href="css/style.css?v=6" media="screen, projection" rel="stylesheet" type="text/css"/>
 </head>
 <body>
   <div id="page" class="container">
@@ -92,23 +92,25 @@
                     <input type="checkbox" id="settings-showdead"/>
                     Show dead?
                   </label>
-                </div>
-              </div>
-              <div class="control-group">
-                <label class="control-label">Redirects:</label>
-                <div class="controls">
                   <label class="checkbox">
                     <input type="checkbox" id="settings-redirect"/>
                     Send story links to alternate front ends?
                   </label>
-                  <p class="redirect-help">
-                    Sites that hide the basics from signed-out visitors are on by
-                    default. Public instances come and go &mdash; switch to another
-                    if one stops answering, and alt-click any rewritten link to
-                    open the original site instead.
+                  <p class="redirect-summary">
+                    <span id="redirect-names"></span>
+                    <a href="#" id="redirect-toggle" aria-expanded="false"
+                       aria-controls="redirect-detail">customize</a>
                   </p>
-                  <div class="redirect-list" id="redirect-list"></div>
-                  <button type="button" class="btn" id="redirect-reset">restore defaults</button>
+                  <div class="redirect-detail" id="redirect-detail" style="display: none;">
+                    <p class="redirect-help">
+                      Switching this on rewrites links to the sites that hide the
+                      basics from signed-out visitors; the rest are yours to pick.
+                      Instances come and go &mdash; switch if one stops answering;
+                      alt-click a rewritten link for the original site.
+                    </p>
+                    <div class="redirect-list" id="redirect-list"></div>
+                    <button type="button" class="btn" id="redirect-reset">restore defaults</button>
+                  </div>
                 </div>
               </div>
               <div class="control-group">
@@ -155,6 +157,6 @@
     </div>
   </div>
 
-<script src="js/app.js?v=4" type="text/javascript"></script>
+<script src="js/app.js?v=6" type="text/javascript"></script>
 </body>
 </html>

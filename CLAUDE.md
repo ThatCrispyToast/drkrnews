@@ -21,7 +21,8 @@ chromium --headless --disable-gpu --hide-scrollbars --window-size=1440,2000 \
 ```
 
 Params: `?theme=<name>`, `?mode=auto|light|dark`, `?filter=10|20|half|homepage|all`,
-`?settings=open`, `?redirects=on|off`. Mobile: add `--user-agent=<iPhone UA>` and
+`?settings=open`, `?redirects=on|off|open` (`open` expands the per-service list
+without touching the switch). Mobile: add `--user-agent=<iPhone UA>` and
 `--window-size=390,1600`.
 Reference screenshots of the clone AND of the real hckrnews.com live in
 `screenshots/` (`reference-original-*.png`).
@@ -108,13 +109,16 @@ Story links can resolve to an alternative front end (Nitter for X, Redlib for
 Reddit, …). This is ours, not the original's — hckrnews has no such feature —
 so fidelity doesn't constrain it; correctness and honesty do.
 
-- **The default rule is the whole feature**: a service marked `gated: true`
-  (the site withholds basic reading from signed-out visitors) is rewritten out
-  of the box; everything else ships off. `svc.on` falls back to `svc.gated`, so
-  adding a gated service turns it on automatically. Two gated services opt out
-  with an explicit `on: false` — TikTok (every ProxiTok instance we found is
-  broken) and paywalled news (archive.today captchas too often to surprise
-  someone with). If you flip one of those, say why in the `note`.
+- **The feature itself is opt-in** (`state.redirects.on` defaults false):
+  rewriting someone's links to a third party is not something to do to a
+  visitor who didn't ask. Don't quietly flip that back.
+- **The `gated` rule decides what happens once it's on**: a service marked
+  `gated: true` (the site withholds basic reading from signed-out visitors) is
+  switched on within the feature; everything else ships off. `svc.on` falls
+  back to `svc.gated`, so adding a gated service enrolls it automatically. Two
+  gated services opt out with an explicit `on: false` — TikTok (every ProxiTok
+  instance we found is broken) and paywalled news (archive.today captchas too
+  often to surprise someone with). If you flip one of those, say why in `note`.
 - **Host matching walks up the labels**, so `hosts: ['medium.com']` also claims
   `netflixtechblog.medium.com`, and `reddit.com` claims `old.`/`np.`/`new.`. It
   never matches a bare TLD. `skip` excludes specific hosts that the parent walk
@@ -138,10 +142,24 @@ so fidelity doesn't constrain it; correctness and honesty do.
   end would lie about what the story is. `.source.redirected` (dotted
   underline + title) is the only tell.
 
+- **The settings panel has room for exactly one line of this.** The master
+  switch is the fourth checkbox in the existing `Settings:` group — not a
+  section of its own — and the twelve-row list hides behind `customize`,
+  standing in as a muted line naming what's on (`redirectNames()`, capped at
+  four). Its own section cost 503px of an 858px panel, 1064px of 1603px on a
+  phone; collapsed it's ~30px. Anything else added here should collapse too.
+  Two things that bit once: the summary goes stale unless every per-service
+  change calls `syncRedirectUi()`, and `restore defaults` must preserve
+  `state.redirects.on` — it sits inside the list, so flipping the master
+  switch above it is not its business.
+
 State lives at `state.redirects = { on, services: { <id>: { on, instance } } }`.
 `normalizeRedirects()` rebuilds it against the registry on every load: unknown
 ids are dropped, missing ones arrive with defaults. **That's why adding a
-service needs no state migration** — don't write one.
+service needs no state migration** — don't write one. The one real migration
+is `_v < 4`, which clears `redirects.on`: v3 shipped the feature on by default
+for a few hours before it became opt-in, and saves from that window would
+otherwise keep a setting nobody chose.
 
 ## Theming (css/style.css)
 

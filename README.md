@@ -40,8 +40,8 @@ New here:
 - Themes: pick a light theme (classic, sepia, solarized light) and a dark
   theme (drkr, dracula, nord, solarized dark, terminal) independently
 - Accent color: replace the orange with any color you like
-- Redirects: story links to login-walled sites resolve to an alternative
-  front end (see below)
+- Redirects: switch it on and story links to login-walled sites resolve to
+  an alternative front end (see below)
 
 Preferences persist in localStorage. No accounts, no tracking.
 
@@ -49,10 +49,11 @@ Preferences persist in localStorage. No accounts, no tracking.
 
 Some sites withhold the thing you clicked for until you sign in - X hides
 the replies, Reddit's mobile site drops an app wall over the thread, Medium
-meters the article. Story links to those sites are rewritten to an
-alternative front end that serves the same content without the wall:
+meters the article. Switch this on and story links to those sites are
+rewritten to an alternative front end that serves the same content without
+the wall:
 
-| Site | Front end | Default |
+| Site | Front end | Once switched on |
 | --- | --- | --- |
 | X / Twitter | Nitter | on |
 | Reddit | Redlib | on |
@@ -67,11 +68,13 @@ alternative front end that serves the same content without the wall:
 | Wikipedia | Wikiless | off |
 | Paywalled news (19 domains) | archive.today | off |
 
-The rule for the defaults: if a site hides basic reading from signed-out
-visitors, its links are rewritten out of the box; everything else is offered
-but left off. Each service has its own switch under **settings**, plus a
-choice of public instances and a `custom…` field, because instances come and
-go constantly - if one stops answering, pick another.
+The whole feature is off until you turn it on; nothing is rewritten behind
+your back. What it rewrites once on is the rule in that last column: sites
+that hide basic reading from signed-out visitors, and nothing else.
+**Settings** carries the switch and a line naming what's on; **customize**
+opens the per-service list, where each has its own switch, a choice of public
+instances, and a `custom…` field - because instances come and go constantly,
+and when one stops answering you want another.
 
 A rewritten link still shows the story's own domain, marked with a dotted
 underline whose tooltip names the front end. **Alt-click** it to open the
@@ -111,7 +114,8 @@ clock, while the top 10/20/50% thresholds are computed per UTC day.
 ## URL parameters
 
 `?theme=dracula`, `?mode=dark`, `?filter=10`, `?settings=open`,
-`?redirects=off` - handy for sharing and screenshots.
+`?redirects=off` (or `open`, to expand the per-service list) - handy for
+sharing and screenshots.
 
 ## Deploying
 
