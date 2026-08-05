@@ -29,7 +29,7 @@
   });
 })();
 </script>
-<link href="css/style.css?v=4" media="screen, projection" rel="stylesheet" type="text/css"/>
+<link href="css/style.css?v=5" media="screen, projection" rel="stylesheet" type="text/css"/>
 </head>
 <body>
   <div id="page" class="container">
@@ -95,6 +95,23 @@
                 </div>
               </div>
               <div class="control-group">
+                <label class="control-label">Redirects:</label>
+                <div class="controls">
+                  <label class="checkbox">
+                    <input type="checkbox" id="settings-redirect"/>
+                    Send story links to alternate front ends?
+                  </label>
+                  <p class="redirect-help">
+                    Sites that hide the basics from signed-out visitors are on by
+                    default. Public instances come and go &mdash; switch to another
+                    if one stops answering, and alt-click any rewritten link to
+                    open the original site instead.
+                  </p>
+                  <div class="redirect-list" id="redirect-list"></div>
+                  <button type="button" class="btn" id="redirect-reset">restore defaults</button>
+                </div>
+              </div>
+              <div class="control-group">
                 <label class="control-label">Appearance:</label>
                 <div class="controls">
                   <div class="theme-row">
@@ -138,6 +155,6 @@
     </div>
   </div>
 
-<script src="js/app.js?v=3" type="text/javascript"></script>
+<script src="js/app.js?v=4" type="text/javascript"></script>
 </body>
 </html>

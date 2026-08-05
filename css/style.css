@@ -298,6 +298,14 @@ ul.entries { margin-bottom: 0; }
 
 .entries .source { color: var(--muted); font-size: 12px; }
 
+/* a link sent to an alternate front end still shows the story's own domain, so
+   the dotted underline (and the title behind it) is the only tell that the href
+   points somewhere else */
+.entries .source.redirected {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
 .entries .dead { font-size: 10px; color: var(--faint); }
 .entries .dead .source { color: var(--faint); }
 .entries a.link.dead::before {
@@ -403,6 +411,60 @@ ul.entries { margin-bottom: 0; }
   border-color: transparent;
 }
 .btn-primary:hover { opacity: 0.9; }
+
+/* ---- redirects: one row per service, name on the left, instance on the right */
+
+.redirect-help {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 15px;
+  margin: 2px 0 8px 0;
+  max-width: 520px;
+}
+
+.redirect-list { margin-bottom: 12px; }
+.redirect-list.disabled { opacity: 0.45; }
+
+.redirect-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 3px 0;
+}
+.redirect-name {
+  flex: 1 1 240px;
+  min-width: 0;
+  cursor: pointer;
+}
+.redirect-list.disabled .redirect-name { cursor: default; }
+.redirect-name input { margin-right: 2px; }
+.redirect-hosts, .redirect-tag { color: var(--muted); font-size: 11px; }
+.redirect-tag {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.redirect-row select,
+.redirect-custom {
+  /* these are ours, not the original's grid — border-box keeps a full-width
+     control on a phone from overflowing its column against the global reset */
+  box-sizing: border-box;
+  font-family: var(--font);
+  font-size: 12px;
+  line-height: 16px;
+  padding: 3px 6px;
+  color: var(--fg);
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.redirect-row select { flex: 0 1 auto; max-width: 100%; cursor: pointer; }
+.redirect-custom { flex: 1 1 200px; min-width: 0; }
+.redirect-custom:invalid { border-color: var(--accent); }
 
 .theme-row {
   display: flex;
@@ -544,4 +606,12 @@ input[type="color"] {
   .mode-pills button { padding: 8px 12px; }
   .theme-row input[type="color"] { width: 48px; height: 34px; }
   .theme-row .btn { padding: 8px 12px; }
+
+  /* same treatment for the redirect rows: name over instance, full-width
+     controls, and a checkbox row tall enough to hit */
+  .redirect-row { display: block; padding: 7px 0; }
+  .redirect-row select,
+  .redirect-custom { display: block; width: 100%; margin-top: 5px; padding: 7px 6px; }
+  .redirect-row select { max-width: none; }
+  #redirect-reset { padding: 8px 12px; }
 }

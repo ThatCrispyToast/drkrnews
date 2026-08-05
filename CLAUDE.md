@@ -21,7 +21,8 @@ chromium --headless --disable-gpu --hide-scrollbars --window-size=1440,2000 \
 ```
 
 Params: `?theme=<name>`, `?mode=auto|light|dark`, `?filter=10|20|half|homepage|all`,
-`?settings=open`. Mobile: add `--user-agent=<iPhone UA>` and `--window-size=390,1600`.
+`?settings=open`, `?redirects=on|off`. Mobile: add `--user-agent=<iPhone UA>` and
+`--window-size=390,1600`.
 Reference screenshots of the clone AND of the real hckrnews.com live in
 `screenshots/` (`reference-original-*.png`).
 
@@ -101,6 +102,47 @@ Rendering is one flat `allEntries` stream (sorted by `date` desc) rebuilt by
 `renderStream()` into per-local-day `<ul>`s. Filtering only toggles
 `display` via `applyFilter()`/`utcThresholds()`.
 
+## Redirects (the `FRONTENDS` registry, js/app.js)
+
+Story links can resolve to an alternative front end (Nitter for X, Redlib for
+Reddit, …). This is ours, not the original's — hckrnews has no such feature —
+so fidelity doesn't constrain it; correctness and honesty do.
+
+- **The default rule is the whole feature**: a service marked `gated: true`
+  (the site withholds basic reading from signed-out visitors) is rewritten out
+  of the box; everything else ships off. `svc.on` falls back to `svc.gated`, so
+  adding a gated service turns it on automatically. Two gated services opt out
+  with an explicit `on: false` — TikTok (every ProxiTok instance we found is
+  broken) and paywalled news (archive.today captchas too often to surprise
+  someone with). If you flip one of those, say why in the `note`.
+- **Host matching walks up the labels**, so `hosts: ['medium.com']` also claims
+  `netflixtechblog.medium.com`, and `reddit.com` claims `old.`/`np.`/`new.`. It
+  never matches a bare TLD. `skip` excludes specific hosts that the parent walk
+  would otherwise catch (`i.redd.it`, `miro.medium.com`).
+- **`map(url, base, instance)` returns null to leave a link alone**, which is
+  the right answer whenever the front end can't serve that path —
+  AnonymousOverflow only renders `/questions/<id>`, BreezeWiki needs a wiki
+  subdomain. Falling through to a broken page is worse than not redirecting.
+  The default (no `map`) is an origin swap keeping path, query and hash.
+- **Instances rot, fast, and you cannot verify them from this box.** Nearly all
+  of them sit behind Anubis or Cloudflare bot challenges: curl gets
+  "Just a moment…" / 418 / 403 and *headless Chromium is also refused*
+  ("Automated verification failed"), so a failed probe means nothing. What a
+  probe does prove: NXDOMAIN is dead (that's how freedium.cfd and
+  proxitok.pabloferreiro.es were caught), and a 404 on a correct deep path is a
+  broken route. Lists were last checked 2026-08-04.
+- The escape hatches exist because of the above: every row has a `custom…`
+  entry, and alt-clicking a rewritten link goes to `data-original`. Don't
+  remove either.
+- **The source label keeps the story's own domain** — renaming it to the front
+  end would lie about what the story is. `.source.redirected` (dotted
+  underline + title) is the only tell.
+
+State lives at `state.redirects = { on, services: { <id>: { on, instance } } }`.
+`normalizeRedirects()` rebuilds it against the registry on every load: unknown
+ids are dropped, missing ones arrive with defaults. **That's why adding a
+service needs no state migration** — don't write one.
+
 ## Theming (css/style.css)
 
 Everything flows through CSS custom properties defined per
@@ -169,4 +211,5 @@ and 390px widths) rather than eyeballing screenshots.
 
 One localStorage key `drkrnews:v1`, versioned via `_v` (see
 `loadState()` migration). Holds filter, settings, theme choices, custom
-accent, lastVisit, and per-story read-comment counts (capped at 500).
+accent, redirect switches and instances, lastVisit, and per-story
+read-comment counts (capped at 500).

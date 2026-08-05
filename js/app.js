@@ -40,10 +40,271 @@
     lightTheme: 'classic',
     darkTheme: 'drkr',
     accent: null,
+    redirects: {},        // filled in by normalizeRedirects()
     lastVisit: null,
     read: {}
   };
-  var STATE_VERSION = 2;
+  var STATE_VERSION = 3;
+
+  /* ------------------------------------------------ alternate front ends --- */
+  /* Story links can be pointed at a privacy-respecting mirror instead of the
+     site itself. The rule behind the defaults: anything that withholds basic
+     reading from logged-out visitors (`gated` — X hides replies, Reddit's
+     mobile site blocks the page outright) is rewritten out of the box, and
+     everything else is offered but left off. Two gated services override that
+     with an explicit `on: false`; their notes say why.
+
+     A service claims a host when the host equals one of its `hosts` or is a
+     subdomain of one, minus anything in `skip`. Where the front end's URL
+     shape differs from the original's, `map(url, base, instance)` builds the
+     rewrite and may return null to leave a link alone; the default is an
+     origin swap that keeps path, query and hash.
+
+     Instance lists were checked on 2026-08-04, but public instances come and
+     go constantly — every row has a `custom…` entry, and alt-clicking a
+     rewritten link opens the original. */
+
+  var FRONTENDS = [
+    {
+      id: 'twitter',
+      name: 'X / Twitter',
+      hosts: ['twitter.com', 'x.com'],
+      gated: true,
+      note: 'signed-out visitors get the one post and none of the replies',
+      instances: ['https://xcancel.com', 'https://nitter.privacyredirect.com',
+                  'https://nitter.net', 'https://nitter.tiekoetter.com',
+                  'https://lightbrd.com']
+    },
+    {
+      id: 'reddit',
+      name: 'Reddit',
+      hosts: ['reddit.com', 'redd.it'],
+      skip: ['i.redd.it', 'v.redd.it', 'preview.redd.it'],
+      gated: true,
+      note: 'the mobile site buries the thread under an app/login wall',
+      instances: ['https://safereddit.com', 'https://redlib.privacyredirect.com',
+                  'https://redlib.catsarch.com', 'https://redlib.tiekoetter.com',
+                  'https://old.reddit.com'],
+      map: function (u, base) {
+        // redd.it/<id> is a short link to a comment thread
+        if (bareHost(u.hostname) === 'redd.it') {
+          var id = u.pathname.replace(/^\/+|\/+$/g, '');
+          return id ? base + '/comments/' + id : null;
+        }
+        return swapOrigin(u, base);
+      }
+    },
+    {
+      id: 'instagram',
+      name: 'Instagram',
+      hosts: ['instagram.com'],
+      gated: true,
+      note: 'a post is one scroll before the login modal takes the page',
+      instances: ['https://imginn.com', 'https://proxigram.privacyredirect.com']
+    },
+    {
+      id: 'medium',
+      name: 'Medium',
+      hosts: ['medium.com'],
+      skip: ['cdn-images-1.medium.com', 'miro.medium.com'],
+      gated: true,
+      note: 'member-only posts are paywalled and the rest nag for an account',
+      instances: [{ url: 'https://freedium-mirror.cfd', wrap: true },
+                  'https://scribe.rip'],
+      map: function (u, base, inst) {
+        // Freedium takes the whole original URL as its path
+        if (inst.wrap) return base + '/' + u.href;
+        // <user>.medium.com/<slug> is medium.com/@<user>/<slug> in Scribe's shape
+        var m = /^([^.]+)\.medium\.com$/.exec(bareHost(u.hostname));
+        if (m) return base + '/@' + m[1] + u.pathname + u.search + u.hash;
+        return swapOrigin(u, base);
+      }
+    },
+    {
+      id: 'quora',
+      name: 'Quora',
+      hosts: ['quora.com'],
+      gated: true,
+      note: 'answers blur out until you sign up',
+      instances: ['https://quetre.privacyredirect.com', 'https://quetre.iket.me']
+    },
+    {
+      id: 'tiktok',
+      name: 'TikTok',
+      hosts: ['tiktok.com'],
+      gated: true,
+      on: false,   // gated, but TikTok has broken every ProxiTok instance we could find
+      note: 'login-walled, but ProxiTok instances are mostly dead — try one and see',
+      instances: ['https://proxitok.privacyredirect.com', 'https://tt.bloat.cat']
+    },
+    {
+      id: 'youtube',
+      name: 'YouTube',
+      hosts: ['youtube.com', 'youtu.be'],
+      note: 'no ads, no cookies, no player telemetry',
+      instances: ['https://yewtu.be', 'https://invidious.f5.si',
+                  'https://invidious.privacyredirect.com', 'https://piped.video'],
+      map: function (u, base) {
+        var q;
+        if (bareHost(u.hostname) === 'youtu.be') {
+          var id = u.pathname.split('/')[1];
+          if (!id) return null;
+          q = new URLSearchParams(u.search);   // keeps ?t=
+          q.set('v', id);
+          return base + '/watch?' + q + u.hash;
+        }
+        var m = /^\/(?:shorts|live|embed|v)\/([^/]+)/.exec(u.pathname);
+        if (m) return base + '/watch?v=' + encodeURIComponent(m[1]) + u.hash;
+        return swapOrigin(u, base);
+      }
+    },
+    {
+      id: 'stackexchange',
+      name: 'Stack Overflow',
+      hosts: ['stackoverflow.com', 'stackexchange.com'],
+      note: 'the answers without the cookie banner or the sign-up interstitial',
+      instances: ['https://anonymousoverflow.privacyredirect.com',
+                  'https://ao.vern.cc', 'https://ao.bloat.cat'],
+      map: function (u, base) {
+        // AnonymousOverflow only renders question pages
+        if (!/^\/(?:questions|q|a)\/\d+/.test(u.pathname)) return null;
+        var host = bareHost(u.hostname);
+        if (host === 'stackoverflow.com') return swapOrigin(u, base);
+        // every other network site is /exchange/<subdomain>/…
+        var m = /^(.+)\.stackexchange\.com$/.exec(host);
+        return m ? base + '/exchange/' + m[1] + u.pathname + u.search + u.hash : null;
+      }
+    },
+    {
+      id: 'fandom',
+      name: 'Fandom',
+      hosts: ['fandom.com'],
+      note: 'the wiki without the video player and the three ad rails',
+      instances: ['https://antifandom.com', 'https://breezewiki.com',
+                  'https://breezewiki.privacyredirect.com'],
+      map: function (u, base) {
+        // <wiki>.fandom.com/wiki/Page  ->  <instance>/<wiki>/wiki/Page
+        var m = /^([^.]+)\.fandom\.com$/.exec(bareHost(u.hostname));
+        return m ? base + '/' + m[1] + u.pathname + u.search + u.hash : null;
+      }
+    },
+    {
+      id: 'imgur',
+      name: 'Imgur',
+      hosts: ['imgur.com'],
+      note: 'the image without the app prompt or the tracking pixels',
+      instances: ['https://rimgo.privacyredirect.com', 'https://rimgo.bloat.cat',
+                  'https://imgur.artemislena.eu']
+    },
+    {
+      id: 'wikipedia',
+      name: 'Wikipedia',
+      hosts: ['wikipedia.org'],
+      note: 'same article, no analytics and no fundraising banners',
+      instances: ['https://wikiless.privacyredirect.com', 'https://wikiless.org'],
+      map: function (u, base) {
+        // the language lives in the subdomain upstream and in ?lang= here
+        var m = /^([a-z]{2,3}(?:-[a-z]+)?)\.(?:m\.)?wikipedia\.org$/
+          .exec(bareHost(u.hostname));
+        var q = new URLSearchParams(u.search);
+        q.set('lang', m ? m[1] : 'en');
+        return base + u.pathname + '?' + q + u.hash;
+      }
+    },
+    {
+      id: 'paywall',
+      name: 'Paywalled news',
+      hosts: ['wsj.com', 'nytimes.com', 'ft.com', 'bloomberg.com', 'economist.com',
+              'washingtonpost.com', 'newyorker.com', 'theatlantic.com', 'wired.com',
+              'businessinsider.com', 'barrons.com', 'thetimes.co.uk',
+              'telegraph.co.uk', 'hbr.org', 'seekingalpha.com', 'nationalgeographic.com',
+              'latimes.com', 'bostonglobe.com', 'thetimes.com'],
+      gated: true,
+      on: false,   // gated, but archive.today captchas often enough to be a surprise
+      note: 'sends the listed papers to archive.today; it captchas often, hence off',
+      instances: ['https://archive.ph', 'https://archive.today', 'https://archive.is'],
+      map: function (u, base) { return base + '/newest/' + u.href; }
+    }
+  ];
+
+  /* Normalize the registry once: instances become objects, and `on` falls back
+     to `gated` so a new login-walled service is on by default automatically. */
+  var FRONTEND_HOSTS = {};
+  FRONTENDS.forEach(function (svc) {
+    svc.instances = svc.instances.map(function (i) {
+      return typeof i === 'string' ? { url: i } : i;
+    });
+    if (svc.on === undefined) svc.on = !!svc.gated;
+    svc.hosts.forEach(function (h) { FRONTEND_HOSTS[h] = svc; });
+  });
+
+  function bareHost(host) {
+    return String(host).toLowerCase().replace(/^www\./, '').replace(/:\d+$/, '');
+  }
+
+  function swapOrigin(u, base) { return base + u.pathname + u.search + u.hash; }
+
+  /* The service that claims a host: an exact match, or the nearest parent
+     domain, so pub.medium.com and old.reddit.com find medium.com and
+     reddit.com. Never matches a bare TLD. */
+  function serviceForHost(host) {
+    host = bareHost(host);
+    var parts = host.split('.');
+    for (var i = 0; i < parts.length - 1; i++) {
+      var svc = FRONTEND_HOSTS[parts.slice(i).join('.')];
+      if (svc) return svc.skip && svc.skip.indexOf(host) !== -1 ? null : svc;
+    }
+    return null;
+  }
+
+  function instanceFor(svc, url) {
+    for (var i = 0; i < svc.instances.length; i++) {
+      if (svc.instances[i].url === url) return svc.instances[i];
+    }
+    return { url: url };          // a custom entry: assume the plain shape
+  }
+
+  /* Every stored setting is optional: unknown ids are dropped and services the
+     save predates arrive with their registry defaults, so the list can grow
+     without a state migration. */
+  function normalizeRedirects(saved) {
+    saved = (saved && typeof saved === 'object') ? saved : {};
+    var savedServices = (saved.services && typeof saved.services === 'object')
+      ? saved.services : {};
+    var services = {};
+    FRONTENDS.forEach(function (svc) {
+      var s = savedServices[svc.id] || {};
+      services[svc.id] = {
+        on: typeof s.on === 'boolean' ? s.on : svc.on,
+        instance: typeof s.instance === 'string' ? s.instance : svc.instances[0].url
+      };
+    });
+    return { on: typeof saved.on === 'boolean' ? saved.on : true, services: services };
+  }
+
+  /* Where a story link should really go, or null to leave it alone. */
+  function redirectFor(href) {
+    if (!state.redirects.on || !href) return null;
+    var m = /^https?:\/\/([^/?#]+)/i.exec(href);
+    if (!m) return null;
+    var svc = serviceForHost(m[1]);
+    if (!svc) return null;
+    var cfg = state.redirects.services[svc.id];
+    if (!cfg || !cfg.on) return null;
+
+    // a half-typed custom instance shouldn't send the link anywhere
+    var base = String(cfg.instance || '').trim().replace(/\/+$/, '');
+    if (!/^https?:\/\/[^\s/?#]+(\/[^\s?#]*)?$/i.test(base)) return null;
+
+    var u, target, host;
+    try {
+      u = new URL(href);
+      host = new URL(base).host;
+      if (bareHost(host) === bareHost(u.hostname)) return null;   // already there
+      target = (svc.map || swapOrigin)(u, base, instanceFor(svc, base));
+    } catch (e) { return null; }
+    return target && target !== href ? { url: target, host: host, service: svc } : null;
+  }
 
   /* ------------------------------------------------------------- state --- */
 
@@ -69,6 +330,9 @@
     for (var k in DEFAULTS) out[k] = s[k] !== undefined ? s[k] : DEFAULTS[k];
     // pre-v2 saves predate showdead defaulting on; migrate once
     if ((s._v || 1) < 2) out.showdead = true;
+    // v3 added `redirects`; missing and partial saves fill themselves in, so
+    // there is nothing to migrate — the version just records the shape change
+    out.redirects = normalizeRedirects(s.redirects);
     out._v = STATE_VERSION;
     return out;
   }
@@ -286,14 +550,21 @@
 
     var link = document.createElement('a');
     link.className = 'link span15 ' + entry.type + deadCls;
-    link.href = entry.url || hnHref(entry);
+    var via = entry.url ? redirectFor(entry.url) : null;
+    link.href = via ? via.url : (entry.url || hnHref(entry));
+    if (via) link.dataset.original = entry.url;   // the alt-click escape hatch
     setLinkTarget(link);
     link.appendChild(document.createTextNode(entry.title + ' '));
     if (entry.source && !entry.dead) {
+      // the source stays the story's own domain, like the original; a rewritten
+      // link marks it instead of renaming it, so the row still says what it is
       var src = document.createElement('span');
-      src.className = 'source';
+      src.className = via ? 'source redirected' : 'source';
+      if (via) src.title = 'via ' + via.host + ' — alt-click for ' + bareHost(entry.source);
       src.textContent = '(' + entry.source + ')';
       link.appendChild(src);
+    } else if (via) {
+      link.title = 'via ' + via.host;
     }
 
     li.appendChild(hn);
@@ -633,6 +904,122 @@
     });
   }
 
+  /* ---------------------------------------------------- redirect settings --- */
+
+  var CUSTOM = '__custom__';   // a select value no instance URL can collide with
+
+  function buildRedirectRows() {
+    var list = document.getElementById('redirect-list');
+    FRONTENDS.forEach(function (svc) {
+      var row = document.createElement('div');
+      row.className = 'redirect-row';
+
+      var name = document.createElement('label');
+      name.className = 'redirect-name';
+      name.title = svc.note;
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.dataset.svc = svc.id;
+      name.appendChild(box);
+      name.appendChild(document.createTextNode(' ' + svc.name + ' '));
+      var hosts = document.createElement('span');
+      hosts.className = 'redirect-hosts';
+      // the host list is the real answer to "will this catch my link?"
+      hosts.textContent = svc.hosts.slice(0, 3).join(', ') +
+        (svc.hosts.length > 3 ? ', +' + (svc.hosts.length - 3) : '');
+      name.appendChild(hosts);
+      if (svc.gated) {
+        var tag = document.createElement('span');
+        tag.className = 'redirect-tag';
+        tag.textContent = 'login wall';
+        name.appendChild(tag);
+      }
+
+      var select = document.createElement('select');
+      select.dataset.svc = svc.id;
+      svc.instances.forEach(function (inst) {
+        var o = document.createElement('option');
+        o.value = inst.url;
+        o.textContent = inst.url.replace(/^https?:\/\//, '');
+        select.appendChild(o);
+      });
+      var custom = document.createElement('option');
+      custom.value = CUSTOM;
+      custom.textContent = 'custom…';
+      select.appendChild(custom);
+
+      var field = document.createElement('input');
+      field.type = 'url';
+      field.className = 'redirect-custom';
+      field.dataset.svc = svc.id;
+      field.placeholder = 'https://…';
+
+      row.appendChild(name);
+      row.appendChild(select);
+      row.appendChild(field);
+      list.appendChild(row);
+    });
+  }
+
+  /* Push state into the controls: the master switch, each service's checkbox,
+     and the instance select — which falls back to the custom field whenever the
+     saved instance isn't one we ship. */
+  function syncRedirectUi() {
+    var on = state.redirects.on;
+    document.getElementById('settings-redirect').checked = on;
+    var list = document.getElementById('redirect-list');
+    list.classList.toggle('disabled', !on);
+
+    FRONTENDS.forEach(function (svc) {
+      var cfg = state.redirects.services[svc.id];
+      var box = list.querySelector('input[type="checkbox"][data-svc="' + svc.id + '"]');
+      var select = list.querySelector('select[data-svc="' + svc.id + '"]');
+      var field = list.querySelector('input[type="url"][data-svc="' + svc.id + '"]');
+      var known = svc.instances.some(function (i) { return i.url === cfg.instance; });
+      box.checked = cfg.on;
+      select.value = known ? cfg.instance : CUSTOM;
+      field.value = known ? '' : cfg.instance;
+      field.style.display = known ? 'none' : '';
+      [box, select, field].forEach(function (el) { el.disabled = !on; });
+    });
+  }
+
+  function wireRedirects() {
+    var master = document.getElementById('settings-redirect');
+    master.addEventListener('change', function () {
+      state.redirects.on = master.checked;
+      saveState();
+      syncRedirectUi();
+      renderStream();
+    });
+
+    document.getElementById('redirect-list').addEventListener('change', function (ev) {
+      var el = ev.target;
+      var cfg = state.redirects.services[el.dataset.svc || ''];
+      if (!cfg) return;
+      if (el.type === 'checkbox') {
+        cfg.on = el.checked;
+      } else if (el.tagName === 'SELECT') {
+        var field = el.parentNode.querySelector('input[type="url"]');
+        var custom = el.value === CUSTOM;
+        field.style.display = custom ? '' : 'none';
+        cfg.instance = custom ? field.value.trim() : el.value;
+        if (custom) field.focus();
+      } else {
+        cfg.instance = el.value.trim();
+      }
+      saveState();
+      renderStream();
+    });
+
+    document.getElementById('redirect-reset').addEventListener('click', function () {
+      state.redirects = normalizeRedirects(null);
+      saveState();
+      syncRedirectUi();
+      renderStream();
+    });
+  }
+
   /* -------------------------------------------------------------- wiring --- */
 
   function wireEvents() {
@@ -719,6 +1106,15 @@
         lastvisit.closest('li').remove();
         return;
       }
+      // alt-click a rewritten link to go to the site itself (a front end being
+      // down is the usual reason, and there's no other way back to the original)
+      var story = ev.target.closest('a.link[data-original]');
+      if (story && ev.altKey) {
+        ev.preventDefault();
+        if (state.newwindow) window.open(story.dataset.original, '_blank', 'noopener');
+        else location.href = story.dataset.original;
+        return;
+      }
       var hn = ev.target.closest('a.hn');
       if (hn && hn.dataset.id) {
         var entry = byId[hn.dataset.id];
@@ -740,7 +1136,7 @@
 
   function boot() {
     // one-off URL overrides, mostly for sharing/screenshots:
-    //   ?theme=dracula  ?mode=dark  ?filter=10  ?settings=open
+    //   ?theme=dracula  ?mode=dark  ?filter=10  ?settings=open  ?redirects=off
     var q = new URLSearchParams(location.search);
     if (q.get('mode') && ['auto', 'light', 'dark'].indexOf(q.get('mode')) !== -1) {
       state.mode = q.get('mode');
@@ -751,9 +1147,13 @@
       if (THEMES.dark.indexOf(t) !== -1) { state.darkTheme = t; state.mode = 'dark'; }
     }
     if (q.get('filter')) state.filter = q.get('filter');
+    if (q.get('redirects')) state.redirects.on = q.get('redirects') !== 'off';
 
     buildSwatches();
+    buildRedirectRows();
     wireEvents();
+    wireRedirects();
+    syncRedirectUi();
     applyTheme();
     applyFilter();
 
