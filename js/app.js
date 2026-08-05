@@ -865,8 +865,14 @@
     document.getElementById('mode-toggle').textContent =
       icons[state.mode] + ' ' + state.mode;
 
-    var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = getComputedStyle(document.body).backgroundColor;
+    // The two metas in <head> guess the browser chrome from prefers-color-scheme
+    // before we run; the resolved theme is the real answer (and outranks the OS
+    // whenever mode is forced), so drop the guess and give both the actual bg.
+    var bg = getComputedStyle(document.body).backgroundColor;
+    document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
+      m.removeAttribute('media');
+      m.content = bg;
+    });
 
     document.querySelectorAll('.mode-pills button').forEach(function (b) {
       b.classList.toggle('active', b.dataset.mode === state.mode);
@@ -942,6 +948,9 @@
 
       var select = document.createElement('select');
       select.dataset.svc = svc.id;
+      // the checkbox's <label> names the service, not these; without a name of
+      // their own a screen reader reads out twelve anonymous combo boxes
+      select.setAttribute('aria-label', svc.name + ' instance');
       svc.instances.forEach(function (inst) {
         var o = document.createElement('option');
         o.value = inst.url;
@@ -958,6 +967,7 @@
       field.className = 'redirect-custom';
       field.dataset.svc = svc.id;
       field.placeholder = 'https://…';
+      field.setAttribute('aria-label', 'custom ' + svc.name + ' instance URL');
 
       row.appendChild(name);
       row.appendChild(select);

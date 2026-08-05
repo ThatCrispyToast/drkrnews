@@ -125,6 +125,12 @@ content-hashed, so they're referenced as `css/style.css?v=N` and
 `index.html` and `about.html` to bust browser caches. That's the whole
 deploy step.
 
+Worth knowing before you stand up a copy: every visitor's browser loads the
+feed from hckrnews.com directly and re-polls it every four minutes, so a
+deployment leans on someone else's server rather than on yours. That is fine
+for a personal instance and rude at scale - if you expect real traffic, cache
+the feed yourself and point `FEED` in `js/app.js` at your own copy.
+
 ## Credits and license
 
 Interface and behavior reverse-engineered from Wayne Larsen's

@@ -176,6 +176,19 @@ drkr splits them (Dark Reader-style two-tone); other themes inherit via
 FOUC-prevention inline scripts (in BOTH `index.html` and `about.html` —
 keep them in sync) set all three.
 
+**`theme-color` (the mobile browser chrome / PWA status bar) is deliberately
+two metas plus a JS override, and the pieces only work together.** `index.html`
+ships a `(prefers-color-scheme: light)` / `dark` pair as the pre-JS guess, then
+`applyTheme()` strips their `media` and writes the *resolved* background to
+both — because the OS preference is only a guess: a forced `mode`, a non-default
+dark theme (nord is `#2e3440`, not `#181a1b`) or a light theme all outrank it.
+Two ways to re-break it: reverting to `querySelector` (singular) sets only the
+light-media meta, which does nothing on a dark phone; and deleting one of the
+metas loses the pre-JS guess. `about.html` keeps the static pair alone on
+purpose — it doesn't load `app.js`, so nothing is there to resolve it.
+`site.webmanifest` can hold only one color, and it's the dark field, matching
+the icons' own background so the install splash doesn't flash white.
+
 Each theme swatch in settings carries its own `data-theme`, so it previews
 that palette — which means `--accent` *inside a swatch* is that theme's
 accent (correct for its dot, wrong for anything else). `--ui-accent`, set on

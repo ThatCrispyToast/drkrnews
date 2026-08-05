@@ -5,12 +5,22 @@
 <title>drkr news - Hacker News sorted by time</title>
 <meta name="description" content="An unofficial, theme-able clone of hckrnews.com - Hacker News sorted by time, with dark mode and customizable themes."/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="theme-color" content="#ffffff"/>
+<!-- browser chrome follows the scheme, like the page does; #181a1b is drkr's field -->
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#181a1b" media="(prefers-color-scheme: dark)"/>
+<!-- link previews. Relative og:image on purpose: it resolves wherever this is
+     deployed, instead of pointing a fork at somebody else's domain. -->
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="drkr news"/>
+<meta property="og:title" content="drkr news - Hacker News sorted by time"/>
+<meta property="og:description" content="An unofficial, theme-able clone of hckrnews.com - Hacker News sorted by time, with dark mode and customizable themes."/>
+<meta property="og:image" content="web-app-manifest-512x512.png?v=2"/>
+<meta name="twitter:card" content="summary"/>
 <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2"/>
 <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png?v=2"/>
 <link rel="shortcut icon" href="favicon.ico?v=2"/>
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2"/>
-<link rel="manifest" href="site.webmanifest?v=2"/>
+<link rel="manifest" href="site.webmanifest?v=3"/>
 <script>
 /* Apply the saved theme before first paint to avoid a flash of the wrong scheme. */
 (function () {
@@ -135,8 +145,8 @@
                   <div class="theme-row">
                     <span class="theme-row-label">accent</span>
                     <span class="theme-controls">
-                      <input type="color" id="accent-color" value="#ff6600"/>
-                      <button type="button" class="btn" id="accent-reset">reset</button>
+                      <input type="color" id="accent-color" value="#ff6600" aria-label="accent color"/>
+                      <button type="button" class="btn" id="accent-reset" aria-label="reset accent color">reset</button>
                     </span>
                   </div>
                 </div>
@@ -157,6 +167,6 @@
     </div>
   </div>
 
-<script src="js/app.js?v=6" type="text/javascript"></script>
+<script src="js/app.js?v=7" type="text/javascript"></script>
 </body>
 </html>
