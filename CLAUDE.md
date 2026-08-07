@@ -40,6 +40,30 @@ installed iOS PWA) cache CSS/JS aggressively. They're referenced as
 change that asset**. That's the whole deploy step (the original does the same
 thing with hashed filenames).
 
+**Content-Security-Policy**: both pages ship a strict `default-src 'none'`
+policy as a `<meta http-equiv>` (no backend, so it lives in the page). It's
+load-bearing and has two coupling gotchas:
+
+- **The inline FOUC theme script is pinned by SHA-256 hash** (`script-src
+  'sha256-…'`) — a *different* hash per page, since the two inline blocks
+  differ. **Edit that inline script and you MUST recompute its hash**, or the
+  browser silently blocks the boot script and every load flashes the wrong
+  theme. Recompute with (swap `about.html` for its hash):
+  `python3 -c "import re,hashlib,base64;d=open('index.html','rb').read();c=re.findall(rb'<script>(.*?)</script>',d,re.S)[0];print('sha256-'+base64.b64encode(hashlib.sha256(c).digest()).decode())"`
+  There are no inline event handlers, so
+  scripts need no `'unsafe-inline'`; inline `style=` attributes do, hence
+  `style-src 'unsafe-inline'`.
+- **`script-src`/`connect-src` are pinned to the data sources.** `index.html`
+  allows `https://hckrnews.com` (the `<script>`-injected feed) and connects to
+  `hn.algolia.com` + `hacker-news.firebaseio.com`. If you re-point `FEED` to
+  your own cache (see the README's self-host note) or add an API, **update the
+  CSP in both files** or the browser blocks the new origin. `about.html` is
+  tighter — it loads no `app.js` and makes no fetches.
+
+Meta CSP can't set `frame-ancestors`; add an `X-Frame-Options`/`frame-ancestors`
+header at the host if you want anti-clickjacking. Editing the CSP or the metas
+is an HTML change, so no `?v=` bump — that's only for `css`/`js` assets.
+
 **Favicons**: `favicon.svg` is the hand-authored vector source — the "Moonlit"
 mark: drkr's dark field (`#181a1b`) + a two-tone geometric `d` (a dim ring
 `#a83c00` with its left half over-painted bright `#ff8a33`, plus a bright stem),

@@ -521,6 +521,16 @@
     }
   }
 
+  /* Story URLs come from an external feed, so treat them as untrusted: only an
+     http(s) link is safe to use as an href (a javascript:/data: URL would run
+     on click). Anything else falls back to the HN discussion. */
+  function safeUrl(url) {
+    try {
+      var p = new URL(url).protocol;
+      return p === 'http:' || p === 'https:' ? url : null;
+    } catch (e) { return null; }
+  }
+
   function renderEntry(entry) {
     var li = document.createElement('li');
     li.className = 'entry row';
@@ -556,7 +566,7 @@
     var link = document.createElement('a');
     link.className = 'link span15 ' + entry.type + deadCls;
     var via = entry.url ? redirectFor(entry.url) : null;
-    link.href = via ? via.url : (entry.url || hnHref(entry));
+    link.href = via ? via.url : (safeUrl(entry.url) || hnHref(entry));
     if (via) link.dataset.original = entry.url;   // the alt-click escape hatch
     setLinkTarget(link);
     link.appendChild(document.createTextNode(entry.title + ' '));

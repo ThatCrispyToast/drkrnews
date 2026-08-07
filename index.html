@@ -2,6 +2,13 @@
 <html class="no-js" lang="en">
 <head>
 <meta charset="utf-8"/>
+<!-- Bounds a compromised feed and any future DOM slip: static site, so the
+     policy ships in the page. script-src pins app.js (self), the hckrnews feed,
+     and the one inline theme script below by hash (recompute the hash if you
+     edit that script). No frame-ancestors here — meta CSP ignores it; set an
+     X-Frame-Options/frame-ancestors header at the host if you want it. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-FK9SMELKs2/4z1awNKUx7JkoEp5tX4Njhe13fkPMfZ4=' https://hckrnews.com; connect-src https://hn.algolia.com https://hacker-news.firebaseio.com; img-src 'self'; style-src 'self' 'unsafe-inline'; manifest-src 'self'; base-uri 'none'; form-action 'none'"/>
+<meta name="referrer" content="strict-origin-when-cross-origin"/>
 <title>drkr news - Hacker News sorted by time</title>
 <meta name="description" content="An unofficial, theme-able clone of hckrnews.com - Hacker News sorted by time, with dark mode and customizable themes."/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -167,6 +174,6 @@
     </div>
   </div>
 
-<script src="js/app.js?v=7" type="text/javascript"></script>
+<script src="js/app.js?v=8" type="text/javascript"></script>
 </body>
 </html>

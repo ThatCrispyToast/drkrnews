@@ -129,7 +129,10 @@ Worth knowing before you stand up a copy: every visitor's browser loads the
 feed from hckrnews.com directly and re-polls it every four minutes, so a
 deployment leans on someone else's server rather than on yours. That is fine
 for a personal instance and rude at scale - if you expect real traffic, cache
-the feed yourself and point `FEED` in `js/app.js` at your own copy.
+the feed yourself and point `FEED` in `js/app.js` at your own copy. Both pages
+ship a strict `Content-Security-Policy` `<meta>`, so if you re-point `FEED` (or
+add a data source), allow the new origin in the CSP's `script-src`/`connect-src`
+in `index.html` - otherwise the browser blocks it.
 
 ## Credits and license
 

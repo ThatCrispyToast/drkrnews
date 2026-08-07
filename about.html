@@ -2,6 +2,11 @@
 <html class="no-js" lang="en">
 <head>
 <meta charset="utf-8"/>
+<!-- about.html loads no app.js and makes no network calls, so its policy is
+     tighter than the home page's: just self assets plus the inline theme
+     script below, pinned by hash (recompute if you edit that script). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-p0drnoULdX2XiTNgUPXm2OovTcdQuRvxdyOoO5pcH7Y='; img-src 'self'; style-src 'self' 'unsafe-inline'; manifest-src 'self'; base-uri 'none'; form-action 'none'"/>
+<meta name="referrer" content="strict-origin-when-cross-origin"/>
 <title>about - drkr news</title>
 <meta name="description" content="What drkr news is, where its stories come from, and what the filters, themes and redirects do."/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
