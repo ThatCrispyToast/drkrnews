@@ -4,7 +4,7 @@ A clone of [hckrnews.com](https://hckrnews.com/) - Hacker News sorted by
 time - with dark mode and customizable themes. Plain HTML, CSS, and
 JavaScript: no build step, no framework, no backend.
 
-![drkr news in its default dark theme](screenshots/desktop-drkr.png)
+<img src="screenshots/desktop-drkr.png" alt="drkr news in its default dark theme" width="600">
 
 ## Run it
 
