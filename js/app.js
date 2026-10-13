@@ -29,6 +29,7 @@
     light: ['classic', 'sepia', 'solarized-light'],
     dark: ['drkr', 'dracula', 'nord', 'solarized-dark', 'terminal']
   };
+  var FILTERS = ['10', '20', 'half', 'homepage', 'all'];
 
   var DEFAULTS = {
     filter: 'all',
@@ -329,6 +330,8 @@
     try { s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) {}
     var out = {};
     for (var k in DEFAULTS) out[k] = s[k] !== undefined ? s[k] : DEFAULTS[k];
+    // ?filter= used to be saved unchecked, and a junk value matches no pill
+    if (FILTERS.indexOf(String(out.filter)) === -1) out.filter = DEFAULTS.filter;
     // pre-v2 saves predate showdead defaulting on; migrate once
     if ((s._v || 1) < 2) out.showdead = true;
     // v3 added `redirects`; missing and partial saves fill themselves in, so
@@ -502,13 +505,21 @@
       : 'https://news.ycombinator.com/item?id=' + entry.id;
   }
 
-  function commentsText(entry) {
-    if (entry.dead) return ' ';
+  /* The comment count, or "unread / total" for a thread opened before. The
+     total gets a span of its own so a phone can stack it under the count. */
+  function fillComments(el, entry) {
     var read = state.read[entry.id];
-    if (read !== undefined && entry.comments > read) {
-      return (entry.comments - read) + ' / ' + entry.comments;
+    if (entry.dead) {
+      el.textContent = '\u00a0';
+    } else if (read !== undefined && entry.comments > read) {
+      el.textContent = entry.comments - read;
+      var total = document.createElement('span');
+      total.className = 'total';
+      total.textContent = ' / ' + entry.comments;
+      el.appendChild(total);
+    } else {
+      el.textContent = entry.comments;
     }
-    return String(entry.comments);
   }
 
   function setLinkTarget(a) {
@@ -554,7 +565,7 @@
       p.className = 'row';
       var c = document.createElement('span');
       c.className = 'comments span2';
-      c.textContent = commentsText(entry);
+      fillComments(c, entry);
       var pt = document.createElement('span');
       pt.className = 'points span1' + (entry.homepage ? ' homepage' : '');
       pt.textContent = entry.points;
@@ -837,7 +848,7 @@
           if (li) {
             var c = li.querySelector('.comments');
             var pt = li.querySelector('.points');
-            if (c) c.textContent = commentsText(known);
+            if (c) fillComments(c, known);
             if (pt) {
               pt.textContent = known.points;
               pt.className = 'points span1' + (known.homepage ? ' homepage' : '');
@@ -863,6 +874,18 @@
     return dark ? state.darkTheme : state.lightTheme;
   }
 
+  /* Text for a custom accent. A theme's --accent-fg was chosen for that theme's
+     own accent and can vanish on the user's (white on yellow), so: white, as on
+     the HN orange, unless the accent is too light to carry it at 2.5:1, then
+     black. Luminance with a plain 2.2 gamma is plenty for one threshold. */
+  function textOn(hex) {
+    var n = parseInt(hex.slice(1), 16), lum = 0;
+    [0.0722, 0.7152, 0.2126].forEach(function (w, i) {   // b, g, r
+      lum += w * Math.pow((n >> 8 * i & 255) / 255, 2.2);
+    });
+    return lum > 0.37 ? '#000000' : '#ffffff';
+  }
+
   function applyTheme() {
     var root = document.documentElement;
     root.setAttribute('data-theme', effectiveTheme());
@@ -870,15 +893,23 @@
       if (state.accent) root.style.setProperty(v, state.accent);
       else root.style.removeProperty(v);
     });
+    if (state.accent) root.style.setProperty('--accent-fg', textOn(state.accent));
+    else root.style.removeProperty('--accent-fg');
+    var palette = getComputedStyle(root);
 
-    var icons = { auto: '◑', light: '☀', dark: '☾' };
-    document.getElementById('mode-toggle').textContent =
-      icons[state.mode] + ' ' + state.mode;
+    // U+FE0E keeps the sun a text glyph: iOS draws a bare ☀ as a color emoji
+    var icons = { auto: '◑', light: '☀\uFE0E', dark: '☾' };
+    var toggle = document.getElementById('mode-toggle');
+    toggle.querySelector('.mode-icon').textContent = icons[state.mode];
+    toggle.querySelector('.mode-name').textContent = ' ' + state.mode;
+    toggle.setAttribute('aria-label', 'color scheme: ' + state.mode);
 
     // The two metas in <head> guess the browser chrome from prefers-color-scheme
     // before we run; the resolved theme is the real answer (and outranks the OS
     // whenever mode is forced), so drop the guess and give both the actual bg.
-    var bg = getComputedStyle(document.body).backgroundColor;
+    // Read it off the palette, not off body: body transitions its background,
+    // so straight after a switch it still reports the old color.
+    var bg = palette.getPropertyValue('--bg').trim();
     document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
       m.removeAttribute('media');
       m.content = bg;
@@ -892,8 +923,9 @@
       var selected = scheme === 'light' ? state.lightTheme : state.darkTheme;
       b.classList.toggle('selected', b.dataset.theme === selected);
     });
-    var picker = document.getElementById('accent-color');
-    if (picker && state.accent) picker.value = state.accent;
+    // with no accent of your own, the picker shows the theme's, not a stale orange
+    document.getElementById('accent-color').value =
+      state.accent || palette.getPropertyValue('--accent').trim();
   }
 
   function buildSwatches() {
@@ -1090,10 +1122,16 @@
       document.getElementById('menu').classList.remove('open');
     });
 
-    // phone filter dropdown
+    // phone filter dropdown, which closes from anywhere else like any menu
     document.getElementById('filter-toggle').addEventListener('click', function (ev) {
       ev.preventDefault();
       document.getElementById('menu').classList.toggle('open');
+    });
+    document.addEventListener('click', function (ev) {
+      if (!ev.target.closest('.filters')) document.getElementById('menu').classList.remove('open');
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') document.getElementById('menu').classList.remove('open');
     });
 
     // settings panel
@@ -1145,7 +1183,6 @@
       state.accent = null;
       saveState();
       applyTheme();
-      picker.value = '#ff6600';
     });
 
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
@@ -1202,7 +1239,7 @@
       if (THEMES.light.indexOf(t) !== -1) { state.lightTheme = t; state.mode = 'light'; }
       if (THEMES.dark.indexOf(t) !== -1) { state.darkTheme = t; state.mode = 'dark'; }
     }
-    if (q.get('filter')) state.filter = q.get('filter');
+    if (FILTERS.indexOf(q.get('filter')) !== -1) state.filter = q.get('filter');
     var redirects = q.get('redirects');   // on | off | open (open leaves the switch alone)
     if (redirects === 'on' || redirects === 'off') state.redirects.on = redirects === 'on';
 

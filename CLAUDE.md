@@ -198,7 +198,13 @@ Accent has three roles — `--accent` (fills: tabs/pills), `--accent-hi`
 drkr splits them (Dark Reader-style two-tone); other themes inherit via
 `--accent-hi/line: var(--accent)` in `:root`. The user accent picker and the
 FOUC-prevention inline scripts (in BOTH `index.html` and `about.html` —
-keep them in sync) set all three.
+keep them in sync) set all three. A custom accent also needs the text that
+sits on it: a theme's `--accent-fg` was chosen for its own accent and vanishes
+on a light user color (white on yellow), so `applyTheme()` sets `--accent-fg`
+from `textOn()` — white unless the accent is too light to carry it at 2.5:1,
+which keeps the HN orange white. Only `app.js` does this; the inline scripts
+don't, since nothing accent-filled is on screen before it runs. With no custom
+accent the picker shows the theme's own `--accent`, not a fixed `#ff6600`.
 
 **`theme-color` (the mobile browser chrome / PWA status bar) is deliberately
 two metas plus a JS override, and the pieces only work together.** `index.html`
@@ -206,10 +212,13 @@ ships a `(prefers-color-scheme: light)` / `dark` pair as the pre-JS guess, then
 `applyTheme()` strips their `media` and writes the *resolved* background to
 both — because the OS preference is only a guess: a forced `mode`, a non-default
 dark theme (nord is `#2e3440`, not `#181a1b`) or a light theme all outrank it.
-Two ways to re-break it: reverting to `querySelector` (singular) sets only the
-light-media meta, which does nothing on a dark phone; and deleting one of the
-metas loses the pre-JS guess. `about.html` keeps the static pair alone on
-purpose — it doesn't load `app.js`, so nothing is there to resolve it.
+Three ways to re-break it: reverting to `querySelector` (singular) sets only the
+light-media meta, which does nothing on a dark phone; deleting one of the
+metas loses the pre-JS guess; and reading the color off `body` instead of the
+`--bg` variable — body transitions its background, so straight after a toggle
+it still reports the *old* color and the chrome lags one switch behind.
+`about.html` has no `app.js`, so its inline script does the same swap itself
+on `load` (the first moment the stylesheet is guaranteed in).
 `site.webmanifest` can hold only one color, and it's the dark field, matching
 the icons' own background so the install splash doesn't flash white.
 
@@ -257,6 +266,30 @@ Pixel-parity subtleties, verified against the live site's computed styles
   whitespace between them, so absent a gap their borders touch and the
   `.selected` ring bleeds onto the neighbor. Don't rely on inline whitespace
   the way the hand-written `.mode-pills` buttons once did.
+- **The last-visit rule belongs to `li.lastvisit` only.** The link inside
+  carries the `lastvisit` class too (it's the click target); a selector that
+  catches both draws a second rule 9px under the first.
+
+Phone and touch-screen rules — ours, not the original's:
+
+- **Every hover effect sits inside `@media (hover: hover)`.** A touchscreen
+  applies `:hover` on tap and keeps it until the next tap elsewhere, so a bare
+  hover rule leaves the tapped story row or settings pill highlighted. Don't
+  add one outside that query.
+- **On a phone the mode toggle is the glyph alone** (`.mode-name` hidden; the
+  link's `aria-label` names the mode). The original's header holds two pills;
+  with the word, three only fit beside the 150px logo column from ~370px, so
+  360px Androids got the whole nav dropped under the logo. ☀ carries U+FE0E or
+  iOS draws it as a color emoji.
+- **Numbers that outgrow their columns.** Points are `flex-end` so a 3-digit
+  score in the phone's 22px column overflows left, not into the title; an
+  unread count's `/ total` is its own `.total` span, which a phone stacks on a
+  small second line instead of letting the 42px column wrap it mid-figure.
+- **Story links break long tokens** (`overflow-wrap: break-word`): a title or
+  domain with no break opportunity otherwise widens a phone's page and the
+  browser zooms everything out to fit it.
+- **Instance `<select>`s and the custom URL field are 16px on a coarse
+  pointer** — iOS zooms in on focusing anything smaller, and stays zoomed.
 
 When checking parity, diff computed styles in a headless browser
 (`getBoundingClientRect` + `getComputedStyle` on matching selectors at 1440px

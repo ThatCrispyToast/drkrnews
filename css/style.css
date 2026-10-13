@@ -149,7 +149,13 @@ body {
 }
 
 a { color: var(--link); text-decoration: none; }
-a:hover { text-decoration: underline; }
+/* Hover effects sit behind (hover: hover) throughout this file: a touchscreen
+   applies :hover on tap and keeps it until the next tap somewhere else, so the
+   settings pill would stay lit after closing the panel, and a story you opened
+   would come back still highlighted. */
+@media (hover: hover) {
+  a:hover { text-decoration: underline; }
+}
 
 /* bootstrap-2 base: paragraphs carry a 10px bottom margin (sizes the menu row;
    .entries p zeroes it back out, exactly like the original) */
@@ -212,7 +218,9 @@ header {
 }
 [data-theme="terminal"] header { font-family: var(--font); }
 
-header h1 { font-size: 24px; line-height: 24px; font-weight: normal; }
+/* nowrap: in the terminal theme's monospace, "drkr news" is exactly as wide as
+   the phone's 150px logo column, and rounding broke it over two lines */
+header h1 { font-size: 24px; line-height: 24px; font-weight: normal; white-space: nowrap; }
 header h1 a { color: var(--fg); text-decoration: none; }
 header h3 { font-weight: normal; font-size: 12px; line-height: 12px; }
 header h3 a, header a { text-decoration: underline; color: var(--link); }
@@ -231,7 +239,9 @@ header h3 a, header a { text-decoration: underline; color: var(--link); }
   border-radius: 5px;
   color: var(--link);
 }
-.nav-pills > li > a:hover { background-color: var(--hover); text-decoration: none; }
+@media (hover: hover) {
+  .nav-pills > li > a:hover { background-color: var(--hover); text-decoration: none; }
+}
 .nav-pills > .active > a,
 .nav-pills > .active > a:hover {
   color: var(--accent-fg);
@@ -239,7 +249,9 @@ header h3 a, header a { text-decoration: underline; color: var(--link); }
 }
 .mainnav a { text-decoration: underline; }
 .mainnav a.mode-toggle { text-decoration: none; color: var(--muted); }
-.mainnav a.mode-toggle:hover { color: var(--fg); background-color: var(--hover); }
+@media (hover: hover) {
+  .mainnav a.mode-toggle:hover { color: var(--fg); background-color: var(--hover); }
+}
 
 /* ----------------------------------------------------------- io / menu --- */
 
@@ -284,14 +296,23 @@ a.filters { text-decoration: underline; color: var(--link); }
 ul.entries { margin-bottom: 0; }
 .entries p { margin-bottom: 0; }
 .entries a { padding: 6px 0; }
+/* a title or domain with no break opportunity (a bare URL, say) would run past
+   the column — and on a phone that widens the page, so the browser zooms the
+   whole thing out to fit it */
+.entries .link { overflow-wrap: break-word; }
 
 .comments { text-align: right; }
 .points { text-align: right; }
+/* a score wider than its column (three digits in the phone's 22px one) stays
+   flush right and spills into the gutter on its left, not toward the title */
+.entries .points { display: flex; justify-content: flex-end; }
 .entries .homepage { color: var(--accent-hi); }
 
-.entries a:hover {
-  text-decoration: none;
-  background-color: var(--hover);
+@media (hover: hover) {
+  .entries a:hover {
+    text-decoration: none;
+    background-color: var(--hover);
+  }
 }
 .entries a.hn:visited,
 .entries a.link:visited { color: var(--visited); }
@@ -354,14 +375,18 @@ ul.entries { margin-bottom: 0; }
   top: -14px;
 }
 
-/* last-visit separator: grey cousin of the day tab, click to dismiss */
-.entries .lastvisit {
+/* last-visit separator: grey cousin of the day tab, click to dismiss. The rule
+   is the li's alone — the link inside shares the class (it's the click target),
+   and with the border too it drew a second line under the first */
+.entries li.lastvisit {
   border-bottom: 1px solid var(--muted);
   margin-top: 8px;
   margin-bottom: 8px;
 }
 .entries a.lastvisit { padding: 0; text-decoration: none; }
-.entries a.lastvisit:hover { background-color: transparent; }
+@media (hover: hover) {
+  .entries a.lastvisit:hover { background-color: transparent; }
+}
 .entries .lastvisit .label {
   background-color: var(--muted);
   padding: 2px 5px 4px 5px;
@@ -383,12 +408,15 @@ ul.entries { margin-bottom: 0; }
   font-weight: bold;
   margin: 12px 0 6px 0;
 }
+/* flex keeps a label that wraps on a narrow phone hanging beside its box,
+   instead of tucking the second line in underneath it */
 .settings .checkbox {
-  display: block;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   margin: 4px 0;
   cursor: pointer;
 }
-.settings .checkbox input { margin-right: 6px; }
 
 .settings .form-actions { margin-top: 16px; }
 
@@ -404,13 +432,15 @@ ul.entries { margin-bottom: 0; }
   border-radius: 4px;
   cursor: pointer;
 }
-.btn:hover { border-color: var(--muted); }
 .btn-primary {
   color: var(--accent-fg);
   background-color: var(--accent);
   border-color: transparent;
 }
-.btn-primary:hover { opacity: 0.9; }
+@media (hover: hover) {
+  .btn:hover { border-color: var(--muted); }
+  .btn-primary:hover { opacity: 0.9; }
+}
 
 /* ---- redirects ---------------------------------------------------------- */
 /* The twelve-row list is the biggest thing in this panel by far and almost
@@ -425,7 +455,9 @@ ul.entries { margin-bottom: 0; }
   margin: 0 0 4px 19px;
 }
 .redirect-summary a { color: var(--muted); text-decoration: underline; }
-.redirect-summary a:hover { color: var(--fg); }
+@media (hover: hover) {
+  .redirect-summary a:hover { color: var(--fg); }
+}
 /* the separator belongs to the names, so switching the master off — which
    empties them — doesn't leave a dash dangling in front of the link */
 #redirect-names:not(:empty)::after { content: " — "; }
@@ -454,8 +486,10 @@ ul.entries { margin-bottom: 0; }
 }
 /* twelve near-identical rows are hard to track across; the same hover the story
    rows use ties a name to its instance */
-.redirect-row:hover { background-color: var(--hover); }
-.redirect-list.disabled .redirect-row:hover { background-color: transparent; }
+@media (hover: hover) {
+  .redirect-row:hover { background-color: var(--hover); }
+  .redirect-list.disabled .redirect-row:hover { background-color: transparent; }
+}
 .redirect-name {
   flex: 1 1 240px;
   min-width: 0;
@@ -489,6 +523,13 @@ ul.entries { margin-bottom: 0; }
 .redirect-row select { flex: 0 1 auto; max-width: 100%; cursor: pointer; }
 .redirect-custom { flex: 1 1 200px; min-width: 0; }
 .redirect-custom:invalid { border-color: var(--accent); }
+/* iOS zooms the page in on focusing a field set under 16px, and leaves it
+   zoomed — on any touchscreen, since a phone held sideways gets the tablet
+   layout */
+@media (pointer: coarse) {
+  .redirect-row select,
+  .redirect-custom { font-size: 16px; line-height: 20px; }
+}
 
 .theme-row {
   display: flex;
@@ -623,6 +664,17 @@ input[type="color"] {
   .settings .span15,
   .prose.span15 { margin-left: 20px; }
 
+  /* the original's header carries two pills; the mode toggle makes three, and
+     next to the 150px logo column they only fit around 370px wide — any
+     narrower and the whole nav drops below the logo. The glyph alone says
+     which mode it is; the link's aria-label still names it. */
+  .mainnav .mode-name { display: none; }
+
+  /* an unread count is two numbers ("12 / 146") and the 42px comments column
+     holds about one, so it was breaking wherever it liked — put the total on
+     a line of its own, small, under the count */
+  .entries .comments .total { display: block; font-size: 10px; line-height: 12px; }
+
   /* stack label over control, and give the chips a real touch target */
   .theme-row { display: block; margin: 12px 0; }
   .theme-row-label { display: block; width: auto; margin-bottom: 5px; }
@@ -632,8 +684,10 @@ input[type="color"] {
   .theme-row .btn { padding: 8px 12px; }
 
   /* same treatment for the redirect rows: name over instance, full-width
-     controls, and a checkbox row tall enough to hit */
-  .redirect-row { display: block; padding: 7px 0; }
+     controls, and a checkbox row tall enough to hit. The side padding pays
+     back the row's -4px margin, or everything in it sits 4px left of the
+     column and the controls overhang its right edge */
+  .redirect-row { display: block; padding: 7px 4px; }
   .redirect-row select,
   .redirect-custom { display: block; width: 100%; margin-top: 5px; padding: 7px 6px; }
   .redirect-row select { max-width: none; }

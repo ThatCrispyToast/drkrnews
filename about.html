@@ -5,7 +5,7 @@
 <!-- about.html loads no app.js and makes no network calls, so its policy is
      tighter than the home page's: just self assets plus the inline theme
      script below, pinned by hash (recompute if you edit that script). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-p0drnoULdX2XiTNgUPXm2OovTcdQuRvxdyOoO5pcH7Y='; img-src 'self'; style-src 'self' 'unsafe-inline'; manifest-src 'self'; base-uri 'none'; form-action 'none'"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-lzpnL4yS64QV3bh04ZY0kmU4Wt28ZoNTjOGpEtfg0zw='; img-src 'self'; style-src 'self' 'unsafe-inline'; manifest-src 'self'; base-uri 'none'; form-action 'none'"/>
 <meta name="referrer" content="strict-origin-when-cross-origin"/>
 <title>about - drkr news</title>
 <meta name="description" content="What drkr news is, where its stories come from, and what the filters, themes and redirects do."/>
@@ -29,9 +29,18 @@
   if (t.accent) ['--accent', '--accent-hi', '--accent-line'].forEach(function (v) {
     document.documentElement.style.setProperty(v, t.accent);
   });
+  // no app.js on this page to settle the browser chrome, so once the stylesheet
+  // is in, trade the two OS-scheme guesses for the page's real background
+  addEventListener('load', function () {
+    var bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    if (bg) document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
+      m.removeAttribute('media');
+      m.content = bg;
+    });
+  });
 })();
 </script>
-<link href="css/style.css?v=6" media="screen, projection" rel="stylesheet" type="text/css"/>
+<link href="css/style.css?v=7" media="screen, projection" rel="stylesheet" type="text/css"/>
 </head>
 <body>
   <div id="page" class="container">
