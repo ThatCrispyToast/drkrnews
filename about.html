@@ -122,14 +122,16 @@
         <p>
           Like the original, this is a chronologic list of stories that made
           it onto the Hacker News homepage, ordered by when they first got
-          there. Recent days come straight from
-          <a href="https://hckrnews.com">hckrnews.com</a>'s own feed; days
-          further back are approximated from the
+          there. HN doesn't publish that moment, so a small crawler records it
+          the way the original does: every 30 seconds it reads the front page
+          from the official
+          <a href="https://github.com/HackerNews/API">HN API</a>, notes when
+          each story first appears there, and keeps every story's points and
+          comments current. Days from before the crawler started are
+          approximated from the
           <a href="https://hn.algolia.com/api">HN Algolia API</a> (&ge;20
-          points, ordered by submission time), with the front-page flag from
-          the official
-          <a href="https://github.com/HackerNews/API">Firebase API</a>. No
-          backend, no tracking; your settings live in localStorage.
+          points, ordered by submission time). No tracking; your settings
+          live in localStorage.
         </p>
         <p>
           Not affiliated with Y Combinator or hckrnews.com.
