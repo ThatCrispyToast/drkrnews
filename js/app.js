@@ -1,16 +1,15 @@
 /* drkr news — a theme-able clone of hckrnews.com
  *
  * Data, in order of preference:
- *  1. Our own crawler's files (crawl.py, served from data/). latest.json
- *     holds the current and previous UTC day and is exactly what the
- *     original shows: only stories that made the HN front page, sorted by
- *     the moment they first got there (the `date` field; `time` is the
- *     submission time). Each older day is frozen in data/YYYYMMDD.json.
- *  2. For days the crawler never saw (and as a fallback), the HN Algolia
- *     API. Front-page arrival times aren't public, so those days are
- *     approximated: stories submitted that UTC day with >=20 points,
- *     ordered by submission time. (Fitted against real hckrnews day files,
- *     F1 ~0.7.)
+ *  1. hckrnews.com's own feed (/data/latest.js), loaded cross-origin as a
+ *     plain <script> since it declares `var entries = [...]`. It holds the
+ *     current and previous UTC day and is exactly what the original shows:
+ *     only stories that made the HN front page, sorted by the moment they
+ *     first got there (the `date` field; `time` is the submission time).
+ *  2. For older days (and as a fallback), the HN Algolia API. Front-page
+ *     arrival times aren't public, so archived days are approximated:
+ *     stories submitted that UTC day with >=20 points, ordered by
+ *     submission time. (Fitted against real hckrnews day files, F1 ~0.7.)
  *
  * State (filter, settings, theme, read counts) lives in localStorage.
  */
@@ -18,7 +17,7 @@
   'use strict';
 
   var STORAGE_KEY = 'drkrnews:v1';
-  var DATA = 'data/';            // crawl.py's output
+  var FEED = 'https://hckrnews.com/data/latest.js';
   var ALGOLIA = 'https://hn.algolia.com/api/v1/search_by_date';
   var TOPSTORIES = 'https://hacker-news.firebaseio.com/v0/topstories.json';
   var ARCHIVE_MIN_POINTS = 20;   // approximation of "made the front page"
@@ -388,16 +387,23 @@
 
   /* -------------------------------------------------------------- data --- */
 
-  /* One of the crawler's files: latest.json, or a frozen YYYYMMDD.json.
-     no-cache revalidates every time, so latest.json is always current and an
-     unchanged day file costs a 304. */
-  function loadData(name) {
-    return fetch(DATA + name, { cache: 'no-cache' }).then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    }).then(function (raw) {
-      if (!Array.isArray(raw) || !raw.length) throw new Error('feed empty');
-      return raw.map(normalizeFeed);
+  /* Load the real hckrnews feed by <script> injection (no CORS needed). */
+  function loadHckrFeed() {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = FEED + '?_=' + Date.now();
+      s.onload = function () {
+        var raw = window.entries;
+        window.entries = undefined;
+        s.remove();
+        if (Array.isArray(raw) && raw.length) resolve(raw.map(normalizeFeed));
+        else reject(new Error('feed empty'));
+      };
+      s.onerror = function () {
+        s.remove();
+        reject(new Error('hckrnews feed unreachable'));
+      };
+      document.head.appendChild(s);
     });
   }
 
@@ -757,30 +763,25 @@
 
   function todayUtcKey() { return utcDayKey(Math.floor(Date.now() / 1000)); }
 
-  /* A file whose first story lands more than 2 h into its UTC day was written
-     by a crawler that started that day, so Algolia approximates the stretch
-     before that story. Returns null when there's nothing to fill. */
-  function backfill(entries) {
-    var first = entries[entries.length - 1];          // files are newest first
-    var key = utcDayKey(first.date);
-    if (first.date <= utcDayStart(key) + 2 * 3600) return null;
-    return fetchArchiveDay(key, ARCHIVE_MIN_POINTS).then(function (extra) {
-      merge(extra.filter(function (e) { return e.date < first.date; }));
-    }).catch(function () {});
-  }
-
-  /* Initial load: the crawler's latest.json (2 UTC days), or Algolia if it's
-     unreachable. */
+  /* Initial load: the real feed (2 UTC days), or Algolia if unreachable. */
   function loadInitial() {
     $loading.style.display = '';
-    return loadData('latest.json').then(function (entries) {
+    return loadHckrFeed().then(function (entries) {
       merge(entries);
-      oldestLoadedUtcDay = utcDayKey(entries[entries.length - 1].date);
+      var oldest = utcDayKey(entries[entries.length - 1].date);
+      // if the feed was truncated mid-day, backfill that day from Algolia
+      var oldestStart = utcDayStart(oldest);
+      var truncated = entries[entries.length - 1].date > oldestStart + 2 * 3600;
+      oldestLoadedUtcDay = oldest;
       loadedUtcDayCount = 2;
       renderStream();
       $loading.style.display = 'none';
-      var gap = backfill(entries);
-      if (gap) return gap.then(renderStream);
+      if (truncated) {
+        return fetchArchiveDay(oldest, ARCHIVE_MIN_POINTS).then(function (extra) {
+          merge(extra.filter(function (e) { return e.date < oldestStart + 86400; }));
+          renderStream();
+        }).catch(function () {});
+      }
     }).catch(function () {
       // feed unreachable: approximate today + yesterday from Algolia
       var today = todayUtcKey();
@@ -808,13 +809,8 @@
     loadingOlder = true;
     $loading.style.display = '';
     var key = prevUtcDayKey(oldestLoadedUtcDay);
-    loadData(key + '.json').then(function (entries) {
+    fetchArchiveDay(key, ARCHIVE_MIN_POINTS).then(function (entries) {
       merge(entries);
-      return backfill(entries);
-    }, function () {
-      // a day the crawler never saw
-      return fetchArchiveDay(key, ARCHIVE_MIN_POINTS).then(merge);
-    }).then(function () {
       oldestLoadedUtcDay = key;
       loadedUtcDayCount++;
       renderStream();
@@ -839,7 +835,7 @@
   /* Periodic refresh: re-pull the feed, update counts in place, and offer
      newly arrived stories behind an "N new" link. */
   function refresh() {
-    loadData('latest.json').then(function (entries) {
+    loadHckrFeed().then(function (entries) {
       var freshOnes = [];
       entries.forEach(function (e) {
         var known = byId[e.id];

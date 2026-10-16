@@ -1,22 +1,15 @@
 # drkr news
 
 A dependency-free static clone of [hckrnews.com](https://hckrnews.com/) with
-dark mode and customizable themes. No build step, no framework:
+dark mode and customizable themes. No build step, no framework, no backend:
 `index.html` + `css/style.css` + `js/app.js` (all vanilla), plus
-`about.html`, fed by `crawl.py` — a standard-library Python crawler that
-writes the feed as static JSON into `data/` (gitignored).
+`about.html`.
 
 ## Running / verifying
 
 ```sh
-python3 crawl.py &                 # writes data/ — see "The crawler" below
 python3 -m http.server 8347        # then open http://localhost:8347
 ```
-
-A fresh `data/` starts cold, and for two days the page approximates what the
-crawler hasn't seen — fine for checking layout, useless for checking feed
-fidelity (do that against a crawler that has run for 48 h, or with the
-side-by-side method under "The crawler").
 
 Verify changes visually with headless Chromium; URL params make states
 reproducible without interaction:
@@ -36,11 +29,9 @@ Reference screenshots of the clone AND of the real hckrnews.com live in
 
 ## Deployment
 
-Static files plus one long-running process: any static file server or host
-serves the site, as long as `crawl.py` keeps writing its `data/`. Edit the
-files and re-serve the directory; there's nothing to compile. A change to
-`crawl.py` needs a crawler restart, which loses nothing — it reloads its state
-from `data/` on start.
+A pure static site — no backend, no build step — so any static file server or
+static host works. Edit the files and re-serve the directory; there's nothing
+to compile.
 
 **Cache busting**: assets aren't content-hashed, so browsers (especially an
 installed iOS PWA) cache CSS/JS aggressively. They're referenced as
@@ -63,12 +54,11 @@ load-bearing and has two coupling gotchas:
   scripts need no `'unsafe-inline'`; inline `style=` attributes do, hence
   `style-src 'unsafe-inline'`.
 - **`script-src`/`connect-src` are pinned to the data sources.** `index.html`
-  runs scripts from `'self'` only (plus the hashed inline block) and connects
-  to `'self'` (the crawler's `data/`) + `hn.algolia.com` +
-  `hacker-news.firebaseio.com` (the approximation the archive falls back on).
-  If you serve `data/` from another origin or add an API, **update the CSP**
-  or the browser blocks the new origin. `about.html` is tighter — it loads no
-  `app.js` and makes no fetches.
+  allows `https://hckrnews.com` (the `<script>`-injected feed) and connects to
+  `hn.algolia.com` + `hacker-news.firebaseio.com`. If you re-point `FEED` to
+  your own cache (see the README's self-host note) or add an API, **update the
+  CSP in both files** or the browser blocks the new origin. `about.html` is
+  tighter — it loads no `app.js` and makes no fetches.
 
 Meta CSP can't set `frame-ancestors`; add an `X-Frame-Options`/`frame-ancestors`
 header at the host if you want anti-clickjacking. Editing the CSP or the metas
@@ -114,80 +104,28 @@ Non-obvious semantics that took real digging (don't re-break these):
 
 ## Data pipeline (js/app.js)
 
-1. **Primary**: `data/latest.json`, the crawler's current + previous UTC
-   day, `fetch`ed same-origin by `loadData()` (`cache: 'no-cache'`, so it
-   always revalidates). Re-polled every 4 min (`POLL_MS`) for count updates
-   and the "N new stories" link.
-2. **Archive** (infinite scroll): the crawler's frozen `data/YYYYMMDD.json`
-   for each older UTC day, and for a day it has no file for (before it
-   started), HN Algolia `search_by_date` — one UTC day per query pair
-   (stories ≥ `ARCHIVE_MIN_POINTS` = 20, plus jobs), `date := created_at_i`.
-   That's an approximation (front-page arrival times aren't public) fitted
-   against real day files, F1 ≈ 0.7. Infinite scroll stops at `MAX_DAYS` =
-   14 UTC days. Percent-encode `<`/`>` in `numericFilters` or Algolia's proxy
-   400s.
-3. **Backfill**: a file whose oldest story lands more than 2 h into its UTC
-   day came from a crawler that started that day, so `backfill()`
-   approximates the stretch *before* that story from Algolia. Only that
-   stretch — merging Algolia's whole day would scatter approximations through
-   the part the crawler saw exactly.
-4. **Fallback**: no `latest.json` at all → Algolia for today + yesterday at a
-   gentler `FALLBACK_MIN_POINTS` = 10.
-5. Firebase `topstories.json` (top 30) supplies `homepage` for Algolia rows.
-6. `merge()` dedups by id; crawler (`exact: true`) data always wins.
+1. **Primary**: `https://hckrnews.com/data/latest.js` loaded via `<script>`
+   injection — it's JSONP-style (`var entries = [...]`), which sidesteps
+   CORS (their day files are plain JSON and NOT fetchable from a browser;
+   don't try). Covers current + previous UTC day, exactly matching the
+   original. Re-polled every 4 min (`POLL_MS`, cache-busted) for count
+   updates and the "N new stories" link. If its oldest entry lands more than
+   2 h into that UTC day the feed is treated as truncated and the day is
+   backfilled from Algolia.
+2. **Archive** (infinite scroll) & full fallback: HN Algolia
+   `search_by_date`, one UTC day per query pair (stories ≥
+   `ARCHIVE_MIN_POINTS` = 20, plus jobs), `date := created_at_i`. This is an
+   approximation (front-page arrival times aren't public) fitted against real
+   day files, F1 ≈ 0.7. The feed-down fallback reuses it for today +
+   yesterday at a gentler `FALLBACK_MIN_POINTS` = 10; infinite scroll stops
+   at `MAX_DAYS` = 14 UTC days. Percent-encode `<`/`>` in `numericFilters` or
+   Algolia's proxy 400s.
+3. Firebase `topstories.json` (top 30) supplies `homepage` for archive rows.
+4. `merge()` dedups by id; feed (`exact: true`) data always wins.
 
 Rendering is one flat `allEntries` stream (sorted by `date` desc) rebuilt by
 `renderStream()` into per-local-day `<ul>`s. Filtering only toggles
 `display` via `applyFilter()`/`utcThresholds()`.
-
-## The crawler (crawl.py)
-
-It replaces hckrnews's own crawler, which nobody outside can see — so every
-rule below was inferred from the original's output (`/data/latest.js`, its
-day files, its minified JS) against HN's Firebase API, then checked by
-running both side by side and diffing every field. Changing one of them means
-re-doing that comparison, not reasoning about it.
-
-- **The front page is `topstories[:30]`**, not the HTML at
-  news.ycombinator.com. The two disagree around rank 30 every few minutes,
-  and the original's homepage flags follow `topstories`.
-- **Polls every 30 s, on the :00/:30 grid.** The original's arrival stamps
-  are spaced in multiples of ~33 s (a 30 s timer plus crawl time); `date` is
-  the poll that first saw the story.
-- **Every recorded story is re-read every poll.** The original keeps points
-  and comment counts current for stories *off* the front page too — a slower
-  rotation shows up in a diff. `get()` keeps connections alive for that: one
-  TLS handshake per request would cost several times the data.
-- **The schema is the original's, types and quirks included.** `id` and
-  `time` are strings, `date` and `points` ints. `points`/`comments` are null
-  wherever the API omits them (jobs, the dead, the deleted). `link` is `''`
-  without a URL. `source` is the URL's hostname, `www.` included — absent for
-  text posts, and *kept* when a dead story loses its URL. A missing title or
-  submitter is the string `'undefined'`, which is where the "undefined" dead
-  rows come from. The newest entry in `latest.json` carries `last_update`
-  (time of the last poll); day files don't.
-- **Same-poll arrivals tie on `date` and sort by id, descending**
-  (`newest_first()`), as the original orders them.
-- **Day files freeze at 00:00 UTC**, when their day leaves the two-day
-  window: `homepage` forced false, never rewritten after (the original's
-  scores stop moving at that point too).
-- **A cold start leaves out the front page and whatever on the next two
-  pages could have been on it** (`cold_start()`, kept in
-  `data/.baseline.json` for three days). Stories around rank 30 drop off and
-  return for hours, so without it the first day fills with "arrivals" stamped
-  at their re-entry — three of the first four a fresh crawler logged were
-  exactly that. The exception is anything below rank 30 younger than 2.5 h
-  (`CLIMBING`): in snapshots checked against the original, nothing that
-  young had been on the front page yet — the youngest that had and dropped
-  off was ~3 h old — while every one of them still climbing would otherwise
-  have been lost on arrival. Excluding by *submission* time instead looks
-  tidier and is wrong: about a quarter of arrivals are second-chance stories
-  submitted one to three days earlier.
-- **All state lives in `data/`.** On start it reloads `latest.json`, every
-  day file (for the ids it has ever recorded) and `.baseline.json`, so a
-  restart loses nothing; an outage just stamps whatever arrived meanwhile with
-  the time it comes back. Writes are atomic (dot-named temp file, then
-  rename).
 
 ## Redirects (the `FRONTENDS` registry, js/app.js)
 

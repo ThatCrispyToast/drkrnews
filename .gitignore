@@ -5,7 +5,3 @@ Thumbs.db
 *~
 .vscode/
 .idea/
-
-# crawl.py: its output (served, never committed) and bytecode
-__pycache__/
-data/
