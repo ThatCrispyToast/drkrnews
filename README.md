@@ -3,6 +3,9 @@
 A clone of [hckrnews.com](https://hckrnews.com/), Hacker News sorted by
 time, with dark mode and themes. Written in plain HTML, CSS and JavaScript for easy deployability.
 
+> [!NOTE]
+> A notable portion of this project is AI-generated. While all relevant code has been appropriately reviewed and tested, you should still operate at your own discretion.
+
 ![drkr news in its default dark theme](screenshots/desktop-drkr.png)
 
 ## Run it
