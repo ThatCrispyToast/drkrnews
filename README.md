@@ -1,8 +1,7 @@
 # drkr news
 
 A clone of [hckrnews.com](https://hckrnews.com/), Hacker News sorted by
-time, with dark mode and themes. Plain HTML, CSS and JavaScript: no build
-step, no framework, no backend.
+time, with dark mode and themes. Written in plain HTML, CSS and JavaScript for easy deployability.
 
 ![drkr news in its default dark theme](screenshots/desktop-drkr.png)
 
